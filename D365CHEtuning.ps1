@@ -1,7 +1,11 @@
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
+ 
 
+# Modern websites require TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+ 
 function Import-Module-SQLPS {
      push-location
     import-module sqlps 3>&1 | out-null
@@ -237,6 +241,26 @@ Get-ChildItem "$env:temp/AzCopy/*/azcopy.exe" | Move-Item -Destination "C:\windo
 remove-item "$env:temp/AzCopy.zip" -force -ea 0
 remove-item "$env:temp/AzCopy" -force -Recurse
 }
+
+
+# Get latest notepad++
+$BaseUri = "https://notepad-plus-plus.org"
+$BasePage = Invoke-WebRequest -Uri $BaseUri -UseBasicParsing
+$ChildPath = $BasePage.Links | Where-Object { $_.outerHTML -like '*Current Version*' } | Select-Object -ExpandProperty href
+
+$DownloadPageUri = $BaseUri + $ChildPath
+$DownloadPage = Invoke-WebRequest -Uri $DownloadPageUri -UseBasicParsing
+#Determine bit-ness of O/S and download accordingly
+if ( [System.Environment]::Is64BitOperatingSystem ) {
+    $DownloadUrl = $DownloadPage.Links | Where-Object { $_.outerHTML -like '*npp.*.Installer.x64.exe"*' } | Select-Object -ExpandProperty href
+} else {
+    $DownloadUrl = $DownloadPage.Links | Where-Object { $_.outerHTML -like '*npp.*.Installer.exe"*' } | Select-Object -ExpandProperty href
+}
+Write-Host "Downloading the latest Notepad++ to the temp folder"
+Invoke-WebRequest -Uri $DownloadUrl -OutFile "$env:TEMP\$( Split-Path -Path $DownloadUrl -Leaf )" | Out-Null
+Write-Host "Installing the latest Notepad++"
+Start-Process -FilePath "$env:TEMP\$( Split-Path -Path $DownloadUrl -Leaf )" -ArgumentList "/S" -Wait
+remove-item "$env:TEMP\$( Split-Path -Path $DownloadUrl -Leaf )" -force
 
 #set timezone
 & tzutil  /s "W. Europe Standard Time"
