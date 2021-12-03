@@ -1,5 +1,5 @@
 # D365tools
-The scripts is used post-creation  af CHE DEV system<br>
+The powershellscript D365CHEtuning.ps1 is used post-creation of CloudHosted DEV servers to tune the performance and add tools.<br>
 - Installs EDGE,Chrome,AzCopy and Powershell modules D365fo.tools and NuGet<br>
 - Sets WinDefender rules
 - Sets powerconfig to High performance
