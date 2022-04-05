@@ -6,3 +6,4 @@ The powershellscript D365CHEtuning.ps1 is used post-creation of CloudHosted D365
 - Give SQL service account "Perform Volume Maintenance Task" rights to speedup restore
 - Show computericon on Desktop with servername
 
+The powershellscript azopyGetVHDfromLCS.ps1 downloads large files (VHD etc) from LCS. Generate SAS links in LCS and paste them into the script in the right order! aka: part1 = .exe, part2 = .rar
