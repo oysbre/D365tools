@@ -322,4 +322,5 @@ $Shell = new-object -comobject shell.application
 $NSComputer = $Shell.Namespace($My_Computer)
 $NSComputer.self.name = $env:COMPUTERNAME
 write-host "Tuning of $($env:COMPUTERNAME) done. Press any key to exit." -ForegroundColor green
+write-host "Restart server to enable every optimization. Enjoy!" -ForegroundColor green
 Pause
