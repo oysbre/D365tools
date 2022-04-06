@@ -87,7 +87,7 @@ if(get-module sqlps){"yes"}else{"no"}
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
 cls
-
+write-host "Running DEV optimizing script..." -ForegroundColor Magenta
 #add SQL service account to Perform volume maint task
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
@@ -171,6 +171,9 @@ Write-Host ""
 }#end $account check empty
 #End SQLservice account VolMaintask
 
+# Set the password to never expire
+Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
+
 #set powercfg
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
@@ -179,7 +182,7 @@ Install-Module -Name "d365fo.tools"
 Add-D365WindowsDefenderRules
 write-host "Installed Powershell module d365fo.tools" -ForegroundColor Green
 
-
+#Use IIS instead of IIS Express
 if (test-path "$env:servicedrive\AOSService\PackagesLocalDirectory\bin\DynamicsDevConfig.xml"){
 [xml]$xmlDoc = Get-Content "$env:servicedrive\AOSService\PackagesLocalDirectory\bin\DynamicsDevConfig.xml"
 if ($xmlDoc.DynamicsDevConfig.RuntimeHostType -ne "IIS"){
@@ -191,17 +194,51 @@ write-host 'RuntimeHostType set "IIS" in DynamicsDevConfig.xml' -ForegroundColor
 }#end if test-path xml file
 else {write-host 'AOSService drive not found! Could not set RuntimeHostType to "IIS"' -ForegroundColor red}
 
-#install chrome
-If ((Get-ItemProperty -path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Google Chrome' -ea 0) -eq $null){
-$ChromeInstaller = "ChromeInstaller.exe"; (new-object System.Net.WebClient).DownloadFile('https://dl.google.com/chrome/install/latest/chrome_installer.exe', "$env:TEMP\$ChromeInstaller"); 
-& "$env:TEMP\$ChromeInstaller" /silent /install; $Process2Monitor =  "ChromeInstaller";
-Write-Host "Installing Chrome" -ForegroundColor Yellow -NoNewline
- Do { $ProcessesFound = Get-Process | ?{$Process2Monitor -contains $_.Name} | Select-Object -ExpandProperty Name;
-If ($ProcessesFound) { "." | Write-Host -NoNewline; Start-Sleep -Seconds 1 } else { rm "$env:TEMP\$ChromeInstaller" -EA 0 } }
- Until (!$ProcessesFound)
- Write-Host ""
- Write-host "Chrome installed." -ForegroundColor Green
+#Install packages
+If (Test-Path -Path "$env:ProgramData\Chocolatey") {
+    choco upgrade chocolatey -y -r
+    choco upgrade all --ignore-checksums -y -r
 }
+Else {
+
+    Write-Host "Installing Chocolatey"
+
+    Set-ExecutionPolicy Bypass -Scope Process -Force; 
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; 
+    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+    #Determine choco executable location
+    #   This is needed because the path variable is not updated
+    #   This part is copied from https://chocolatey.org/install.ps1
+    $chocoPath = [Environment]::GetEnvironmentVariable("ChocolateyInstall")
+    if ($chocoPath -eq $null -or $chocoPath -eq '') {
+        $chocoPath = "$env:ALLUSERSPROFILE\Chocolatey"
+    }
+    if (!(Test-Path ($chocoPath))) {
+        $chocoPath = "$env:SYSTEMDRIVE\ProgramData\Chocolatey"
+    }
+    $chocoExePath = Join-Path $chocoPath 'bin\choco.exe'
+
+    $LargeTables = @(
+        #"LargeTables"
+    )
+
+    $packages = @(
+        
+        "googlechrome"
+        "notepadplusplus.install"
+        
+    )
+
+    # Install each program
+    foreach ($packageToInstall in $packages) {
+
+        Write-Host "Installing $packageToInstall" -ForegroundColor Green
+        & $chocoExePath "install" $packageToInstall "-y" "-r"
+    }
+}
+#end install packages
+
 
 #install EDGE
 try {
@@ -241,26 +278,6 @@ Get-ChildItem "$env:temp/AzCopy/*/azcopy.exe" | Move-Item -Destination "C:\windo
 remove-item "$env:temp/AzCopy.zip" -force -ea 0
 remove-item "$env:temp/AzCopy" -force -Recurse
 }
-
-
-# Get latest notepad++
-$BaseUri = "https://notepad-plus-plus.org"
-$BasePage = Invoke-WebRequest -Uri $BaseUri -UseBasicParsing
-$ChildPath = $BasePage.Links | Where-Object { $_.outerHTML -like '*Current Version*' } | Select-Object -ExpandProperty href
-
-$DownloadPageUri = $BaseUri + $ChildPath
-$DownloadPage = Invoke-WebRequest -Uri $DownloadPageUri -UseBasicParsing
-#Determine bit-ness of O/S and download accordingly
-if ( [System.Environment]::Is64BitOperatingSystem ) {
-    $DownloadUrl = $DownloadPage.Links | Where-Object { $_.outerHTML -like '*npp.*.Installer.x64.exe"*' } | Select-Object -ExpandProperty href
-} else {
-    $DownloadUrl = $DownloadPage.Links | Where-Object { $_.outerHTML -like '*npp.*.Installer.exe"*' } | Select-Object -ExpandProperty href
-}
-Write-Host "Downloading the latest Notepad++ to the temp folder"
-Invoke-WebRequest -Uri $DownloadUrl -OutFile "$env:TEMP\$( Split-Path -Path $DownloadUrl -Leaf )" | Out-Null
-Write-Host "Installing the latest Notepad++"
-Start-Process -FilePath "$env:TEMP\$( Split-Path -Path $DownloadUrl -Leaf )" -ArgumentList "/S" -Wait
-remove-item "$env:TEMP\$( Split-Path -Path $DownloadUrl -Leaf )" -force
 
 #set timezone
 & tzutil  /s "W. Europe Standard Time"
