@@ -280,6 +280,7 @@ remove-item "$env:temp/AzCopy" -force -Recurse
 }
 
 #set timezone
+Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
 & tzutil  /s "W. Europe Standard Time"
 
 #Show Desktop icon all users
