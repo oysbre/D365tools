@@ -283,6 +283,37 @@ remove-item "$env:temp/AzCopy" -force -Recurse
 Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
 & tzutil  /s "W. Europe Standard Time"
 
+#Enable TraceFlags on SQL instances
+$StartupParametersPost2016 = @("-T7412")
+#get all the instances on server
+$instproperty = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL"
+$instancesObject = $instproperty.psobject.properties | ?{$_.Value -like 'MSSQL*'} 
+$instances = $instancesObject.Value
+#add all the startup parameters
+if($instances) {
+foreach($instance in $instances) {
+$ins = $instance.split('.')[1]
+if($ins -eq "MSSQLSERVER") {$instanceName = $env:COMPUTERNAME }
+else{$instanceName = $env:COMPUTERNAME + "\" + $ins }
+$regKeyParam = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instance\MSSQLServer\Parameters"
+$property = (Get-ItemProperty $regKeyParam)
+$paramObjects = $property.psobject.properties | ?{$_.Name -like 'SQLArg*'}
+$count = ""
+$count = $paramObjects.count
+#get all the parameters
+$parameters = $StartupParametersPost2016.split(",")
+foreach($parameter in $parameters) {
+    if ($parameter -notin $paramObjects.value) {
+    Write-Host "Adding startup parameter SQLArg$count with value $parameter for $instanceName"
+    $newRegProp = "SQLArg"+$count
+    Set-ItemProperty -Path $regKeyParam -Name $newRegProp -Value $parameter
+    $count = $count + 1
+	Write-Host "Add sucessfully!"
+    } # end if $parameter exist
+}# end foreach $parameter
+}# end foreach $instance
+}# end if $instances
+
 #Show Desktop icon all users
 Set-RegistryValueForAllUsers -RegistryInstance @{'Name' = '{20D04FE0-3AEA-1069-A2D8-08002B30309D}';`
  'Type' = 'Dword'; 'Value' = '0'; 'Path' = 'Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel'} 
