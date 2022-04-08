@@ -10,3 +10,7 @@ The powershellscript 'D365CHEtuning.ps1' is used post-creation of CloudHosted D3
 
 The powershellscript 'azopyGetVHDfromLCS.ps1' downloads large files (VHD,PU/QU/SU,etc) from LCS.
 Generate SAS links in LCS and paste them into the script in the right order! aka: part1 = .exe, part2 = .rar
+
+'DeployPackage.ps1' automates deploying packages on local D365 DEV machine.
+Put the script in a folder with the package zip file and run the powershellscript.
+The script handle the Reportservice "bug" not starting during update.
