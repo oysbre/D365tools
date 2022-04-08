@@ -8,7 +8,7 @@
 - Enables Traceflag 7412 in SQL instance to see live execution plans i SSMS.
 - Show computericon on Desktop with servername.
 
-The powershellscript 'azopyGetVHDfromLCS.ps1' downloads large files (VHD,PU/QU/SU,etc) from LCS.
+'azopyGetVHDfromLCS.ps1' downloads large files (VHD,PU/QU/SU,etc) from LCS.
 Generate SAS links in LCS and paste them into the script in the right order! aka: part1 = .exe, part2 = .rar
 
 'DeployPackage.ps1' automates deploying packages on local D365 DEV machine.
