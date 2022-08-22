@@ -278,6 +278,17 @@ Get-ChildItem "$env:temp/AzCopy/*/azcopy.exe" | Move-Item -Destination "C:\windo
 remove-item "$env:temp/AzCopy.zip" -force -ea 0
 remove-item "$env:temp/AzCopy" -force -Recurse
 }
+else {
+$azcopyupdate = & azcopy -h | select-string -pattern "newer version"
+    if ($azcopyupdate){
+     Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    Unblock-File $env:temp\AzCopy.zip
+    Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
+    Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
+    remove-item $env:temp\AzCopy.zip -force
+    remove-item $env:temp\AzCopy -force -Recurse
+    }
+}#end AZcopy  
 
 #set timezone
 Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
