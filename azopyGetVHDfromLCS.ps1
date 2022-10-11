@@ -1,4 +1,4 @@
-#Powershellscript to download VHD from LCS Shared library using AzCopy. Requires Admin session.
+#Powershellscript to download VHD from LCS Shared library using AzCopy which is MUCH faster than using a browser. Requires Admin session.
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 
 #Set target downloadpath. Default c:\temp
