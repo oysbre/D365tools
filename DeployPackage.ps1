@@ -1,11 +1,7 @@
-#This script automatically deploy packages on local DEV
-If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
-{   
-#"No Administrative rights, it will display a popup window asking user for Admin rights"
-$arguments = "& '" + $myinvocation.mycommand.definition + "'"
-Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
-break
-}
+#This script automatically deploy packages on DEV. Requires Admin session
+#Put the script in the same folder where det deployable package is. Only one ZIP file per folder.
+#The scripts extracts the deployablepackage ZIP file to c:\pck\<deploypackagefolder> and deploys the package
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 #install nuget minimum
 if (!((Get-PackageProvider nuget).version -ge "2.8.5.201")){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
@@ -60,43 +56,32 @@ $runbookPath
 $updateInstallerPath
 $executionLogPath
 
-
-
-
     
-    $sourceFile = get-childitem -path $sourceFolder -filter *.zip | sort lastwritetime | select -last 1
-    $global:sourcePath = Join-Path $sourceFolder $sourceFile
-    #Rename long filenames to keep under 260 characters long
-    $renamedsourceFile = $sourcefile.basename
-    $renamedsourceFile = $renamedsourceFile.replace("FinanceAndOperations","FOE").Replace("_","").Replace(".","").Replace("Application","App").Replace("CombinedBinaryHotfix","ComBinHFix").Replace("AXDeployablePackage","AXDplPck").Replace("AXDeployableRuntime","AXDplRunt").replace("zip","")
-    $targetFolder = $renamedsourceFile
-    $global:targetPath = Join-Path $targetBaseFolder $targetFolder
-
-    $global:updateInstallerPath = Join-Path $targetPath $updateInstallerFile
-
-    $global:runbookId = $renamedsourceFile + $runbookSuffix
-    $runbookFile = $runbookId + $runbookExtension
-    $global:runbookPath = Join-Path $targetPath $runbookFile
-
-    $global:topologyPath = Join-Path $targetPath $topologyFile
-
-    $executionLogFile = $executionLogPrefix + $renamedsourceFile + $executionLogSuffix + $executionLogExtension
-    $global:executionLogPath = Join-Path $targetBaseFolder $executionLogFile
-
+$sourceFile = get-childitem -path $sourceFolder -filter *.zip | sort lastwritetime | select -last 1
+$global:sourcePath = Join-Path $sourceFolder $sourceFile
+#Rename long filenames to keep under 260 characters long
+$renamedsourceFile = $sourcefile.basename
+$renamedsourceFile = $renamedsourceFile.replace("FinanceAndOperations","FOE").Replace("_","").Replace(".","").Replace("Application","App").Replace("CombinedBinaryHotfix","ComBinHFix").Replace("AXDeployablePackage","AXDplPck").Replace("AXDeployableRuntime","AXDplRunt").replace("zip","")
+$targetFolder = $renamedsourceFile
+$global:targetPath = Join-Path $targetBaseFolder $targetFolder
+$global:updateInstallerPath = Join-Path $targetPath $updateInstallerFile
+$global:runbookId = $renamedsourceFile + $runbookSuffix
+$runbookFile = $runbookId + $runbookExtension
+$global:runbookPath = Join-Path $targetPath $runbookFile
+$global:topologyPath = Join-Path $targetPath $topologyFile
+$executionLogFile = $executionLogPrefix + $renamedsourceFile + $executionLogSuffix + $executionLogExtension
+$global:executionLogPath = Join-Path $targetBaseFolder $executionLogFile
  
-Function ExtractFiles
-{
+Function ExtractFiles {
     Write-Host "Extracting $sourcePath to $targetPath..." -foregroundcolor Yellow
-
     Unblock-File $sourcePath
     Expand-7Zip -ArchiveFileName $sourcePath -TargetPath $targetPath
     [xml]$xml = get-content "$targetPath\HotfixInstallationInfo.xml"
     $PlatformVersion = Select-Xml "//Release" $xml | select -first 1 | % {$_.Node.'#text'}
     write-host "PU version: $($PlatformVersion)" -ForegroundColor Green
-}
+}#end function ExtractFiles
 
-Function Set7zipComp
-{
+Function Set7zipComp {
     #modify AOS backup zipcompression to speedup Update process
     if (test-path "$targetPath\AOSService\Scripts\CommonRollbackUtilities.psm1"){
         $7zipcompress = (Get-Content -path "$targetPath\AOSService\Scripts\CommonRollbackUtilities.psm1" -Raw) 
@@ -106,28 +91,21 @@ Function Set7zipComp
             $7zipcompressnew|Set-Content "$targetPath\AOSService\Scripts\CommonRollbackUtilities.psm1"
         }#end if 7zipcompress
     }#end testpath
-}
+}#end function Set7zipComp
 
-Function ExportServiceVersions($PlatformVersion, $ExportSuffix)
-{
+Function ExportServiceVersions($PlatformVersion, $ExportSuffix) {
     $exportFile = $exportPrefix + $PlatformVersion + $ExportSuffix + $ExportExtension
     $exportPath = Join-Path $targetBaseFolder $exportFile
-
     Write-Host "Exporting " $exportPath
- 
     & $updateInstallerPath list > $exportPath
-}
+}#End function ExportServiceVersions
 
-Function SetTopologyData
-{
+Function SetTopologyData {
     Write-Host "Updating " $topologyPath
-
     [xml]$xml = Get-Content $topologyPath
     $machine = $xml.TopologyData.MachineList.Machine
- 
     # Set computer name
     $machine.Name = $env:computername
- 
     #Set service models
     $serviceModelList = $machine.ServiceModelList
     $serviceModelList.RemoveAll()
@@ -144,56 +122,44 @@ Function SetTopologyData
     }
  
     $xml.Save($topologyPath)
-}
+}#end function SetTopologyData
 
-Function GenerateRunbook
-{
+Function GenerateRunbook {
     Write-Host "Generating runbook " $runbookPath
 
     $serviceModelPath = Join-Path $targetPath "DefaultServiceModelData.xml"
     & $updateInstallerPath generate "-runbookId=$runbookId" "-topologyFile=$topologyPath" "-serviceModelFile=$serviceModelPath" "-runbookFile=$runbookPath"
-}
+}#end function GenerateRunbook
 
-Function ImportRunbook
-{
+Function ImportRunbook {
     Write-Host "Importing runbook " $runbookPath
-
     & $updateInstallerPath import "-runbookfile=$runbookPath"
-}
+}#end function ImportRunbook
  
-Function ExecuteRunbook([int] $Step)
-{
+Function ExecuteRunbook([int] $Step) {
     Write-Host "Executing runbook " $runbookPath
-
     #Region Background process to handle bug for reporting service not being started by the upgrade script
     $jb = Start-Job -ScriptBlock { 
-        while ($true)
-        { 
-             $logData = Get-Content -Path $args[0]
-            if ($logData -contains "Sync AX database")
-            { 
-                
+        while ($true) { 
+            $logData = Get-Content -Path $args[0]
+            if ($logData -contains "Sync AX database") {                 
                 $rssrvs= get-service "ReportServer" -ea 0
-                if (!($rssrvs)){
+                if (!($rssrvs)) {
                     $rssrvs = get-service "SQLServerReportingServices" -ea 0
                 }
-                
-                if ($rssrvs.startupType -eq "Disabled"){
+                if ($rssrvs.startupType -eq "Disabled") {
                     set-service -Name $rssrvs.Name -StartupType Automatic
-                    
                 }
                 if (($rssrvs) -and ($rssrvs).status -eq "Stopped"){
                     Start-Service -Name $rssrvs.Name
                     $rssrvs.WaitForStatus("Running")
                     break
                  }
-                
-            }
-            else
-            {
+            }#end if sync ax db
+            else {
                 Start-Sleep -Seconds 15
             }
-        }
+        }#end while $true
     } -ArgumentList $executionLogPath
     #EndRegion Background process to handle bug for reporting service not being started by the upgrade script
 
@@ -208,7 +174,7 @@ Function ExecuteRunbook([int] $Step)
 
     Stop-Job $jb
     Remove-Job $jb
-}
+}#end function ExecuteRunbook
 
 #Install upgrade
 ExtractFiles
