@@ -1,7 +1,7 @@
 #Powershellscript to download VHD from LCS Shared library using AzCopy
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
-#set target downloadpath 
-$targetdir = "<targetdir>"
+#set target downloadpath. default c:\temp
+$targetdir = "c:\temp"
 $D365VHDnaming = "D365VHD-10_0_24_part"
 
 #Get the URL paths with SAS token from LCS
