@@ -1,9 +1,10 @@
-#Download VHD from LCS Shared library
-#set name and version of VHD files
-$finopsver = "D365VHD-10_0_24_part"
+#SCript to download VHD from LCS Shared library using AzCopy
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
+#set target downloadpath 
 $targetdir = "<targetdir>"
+$D365VHDnaming = "D365VHD-10_0_24_part"
 
-#Get the URL paths with SAS token from LCS. 
+#Get the URL paths with SAS token from LCS
 #Place SAS URLs in right order in variable $URLS starting from nr 1
 $URLS = @(
 <#1#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/4aa6d00a-a25b-44f0-a1b8-b3bdba026965/AX7ProductName-12-2002b597-d8f1-4b98-8edd-a5e2dbc475e0?sv=2018-03-28&sr=b&sig=zBIkSaIjjpBhrqLfWA18JYFeoW%2FnVLH0nyE7bMJ5%2BK8%3D&se=2022-10-09T12%3A15%3A00Z&sp=r" 
@@ -49,20 +50,17 @@ if (!(test-path "C:\windows\AzCopy.exe")){write-host "AzCopy not installed. Run 
 #Download files
 $i = 1
 foreach ($url in $URLS){
-    if ($i -eq 1){
-        if (!(test-path "$targetdir\$($finopsver)$i.exe")){
-            azcopy copy $url "$targetdir\$($finopsver)$i.exe"
-            unblock-file "$targetdir\$($finopsver)$i.exe" 
-        }
+    if ($i -eq 1){       
+            azcopy copy $url "$targetdir\$($D365VHDnaming)$i.exe"
+            unblock-file "$targetdir\$($D365VHDnaming)$i.exe"
     }
     else {
-        if (!(test-path "$targetdir\$($finopsver)$i.rar")){
-            azcopy copy $url "$targetdir\$($finopsver)$i.rar"
-            unblock-file "$targetdir\$($finopsver)$i.rar" 
-        }
+            azcopy copy $url "$targetdir\$($D365VHDnaming)$i.rar"
+            unblock-file "$targetdir\$($D365VHDnaming)$i.rar" 
     }
-  $i++
+    $i++
 }#end foreach $url
-if (test-path "$targetdir\$($finopsver)1.exe"){
-    start-process "$targetdir\$($finopsver)1.exe"
+#Extract the VHD image.
+if (test-path "$targetdir\$($D365VHDnaming)1.exe"){
+    start-process "$targetdir\$($D365VHDnaming)1.exe"
 }
