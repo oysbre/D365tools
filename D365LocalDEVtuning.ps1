@@ -536,5 +536,6 @@ New-Item -Path "c:\temp" -Name "dixf" -ItemType "directory"
 #set timezone
 & tzutil  /s "W. Europe Standard Time"
 
+write-host "All set. Restart the computer by pressing any key" -foregroundcolor Cyan
 Pause
 restart-computer
