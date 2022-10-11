@@ -5,8 +5,10 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 $targetdir = "c:\temp"
 $D365VHDnaming = "D365VHD-10_0_24_part"
 
-#Get the URL paths with SAS token from LCS
-#Place SAS URLs in right order in variable $URLS starting from nr 1
+#Note! The URLs with SAS token below are "expired" and will not work.
+#Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
+#Place SAS URLs in right order in variable $URLS starting from nr 1.
+#Save the script and run it!
 $URLS = @(
 <#1#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/4aa6d00a-a25b-44f0-a1b8-b3bdba026965/AX7ProductName-12-2002b597-d8f1-4b98-8edd-a5e2dbc475e0?sv=2018-03-28&sr=b&sig=zBIkSaIjjpBhrqLfWA18JYFeoW%2FnVLH0nyE7bMJ5%2BK8%3D&se=2022-10-09T12%3A15%3A00Z&sp=r" 
 <#2#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/c1c1016d-310f-415e-8a22-a29198827b10/AX7ProductName-12-118a32fa-a371-47f9-a029-9a824f29a958?sv=2018-03-28&sr=b&sig=rV8RmfBJbhZdxEM9TK%2BasvTLdY1RyazodBp0Wi16qwU%3D&se=2022-10-09T12%3A15%3A19Z&sp=r",
