@@ -1,6 +1,7 @@
-#Powershellscript to download VHD from LCS Shared library using AzCopy
+#Powershellscript to download VHD from LCS Shared library using AzCopy. Requires Admin session.
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
-#set target downloadpath. default c:\temp
+
+#Set target downloadpath. Default c:\temp
 $targetdir = "c:\temp"
 $D365VHDnaming = "D365VHD-10_0_24_part"
 
@@ -18,25 +19,43 @@ $URLS = @(
 <#9#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/5b408482-8f19-45d8-8693-7605011f2ca2/AX7ProductName-12-44bd1268-cbd8-4558-a447-e22c65821f97?sv=2018-03-28&sr=b&sig=IYcbogE%2F8fR9hbcKsX%2F7X6rr1yFQFDOGCYYy1mQeNR4%3D&se=2022-10-09T12%3A16%3A48Z&sp=r"
 )
 #--------------------------------------
-
+#Force https over TLS12 protocol
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 #Begin
+function Get-UrlStatusCode([string] $Urlcheck) {
+    try {  (Invoke-WebRequest -Uri $Urlcheck -UseBasicParsing -DisableKeepAlive -method head).StatusCode }
+    catch [Net.WebException]  { [int]$_.Exception.Response.StatusCode  }
+}#end function URL test
+
 if ((!(test-path $targetdir -ea 0)) -or ($targetdir -eq "<targetdir>")){
 write-host "Set/check variable '$targetdir' and try again." -ForegroundColor red;pause;exit
 }
 
+#Check available diskspace for VHD imagefiles 
+$diskspace =  [math]::Round((Get-WmiObject -Class Win32_LogicalDisk  | ? {$_. DriveType -eq 3} | ? {$_.DeviceID -like $targetdir.substring(0,2)}|select FreeSpace).freespace/1GB,0)
+if ($diskspace -lt 32){
+write-host "Not enough diskspace on $($targetdir.substring(0,2).ToUpper()) for VHD imagefiles. Need approx 32 GB for the VHD files. You also need 93 GB to extract the files." -ForegroundColor red;
+pause;
+exit
+}
+
 #Install/update AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
-Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
-Unblock-File $env:temp\AzCopy.zip
-Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
-Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe"
-remove-item $env:temp\AzCopy.zip -force
-remove-item $env:temp\AzCopy -force -Recurse
+    write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
+    remove-item $env:temp\AzCopy.zip -force -ea 0
+    invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    Unblock-File $env:temp\AzCopy.zip
+    Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
+    Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe"
+    remove-item $env:temp\AzCopy.zip -force
+    remove-item $env:temp\AzCopy -force -Recurse
 }
 else {
 $azcopyupdate = & azcopy -h | select-string -pattern "newer version"
-    if ($azcopyupdate){
-     Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+if ($azcopyupdate){
+    write-host "Updating AzCopy..." -ForegroundColor Yellow
+    remove-item $env:temp\AzCopy.zip -force -ea 0 
+    Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
     Unblock-File $env:temp\AzCopy.zip
     Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
     Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
@@ -50,17 +69,28 @@ if (!(test-path "C:\windows\AzCopy.exe")){write-host "AzCopy not installed. Run 
 #Download files
 $i = 1
 foreach ($url in $URLS){
-    if ($i -eq 1){       
-            azcopy copy $url "$targetdir\$($D365VHDnaming)$i.exe"
-            unblock-file "$targetdir\$($D365VHDnaming)$i.exe"
+$statuscode = ""
+    if ($i -eq 1){
+            $statuscode= Get-UrlStatusCode -urlcheck $url
+            if ($statuscode -eq 200){
+                azcopy copy $url "$targetdir\$($D365VHDnaming)$i.exe"
+                unblock-file "$targetdir\$($D365VHDnaming)$i.exe"
+            }
+            else {write-host "Check the SAS link $($URL). Error : "$statuscode -foregroundcolor Red}
     }
     else {
-            azcopy copy $url "$targetdir\$($D365VHDnaming)$i.rar"
-            unblock-file "$targetdir\$($D365VHDnaming)$i.rar" 
+            $statuscode= Get-UrlStatusCode -urlcheck $url
+            if ($statuscode -eq 200){
+                azcopy copy $url "$targetdir\$($D365VHDnaming)$i.rar"
+                unblock-file "$targetdir\$($D365VHDnaming)$i.rar" 
+            }
+            else {write-host "Check the SAS link $($URL). Error : "$statuscode -foregroundcolor Red}
     }
     $i++
 }#end foreach $url
+
 #Extract the VHD image.
 if (test-path "$targetdir\$($D365VHDnaming)1.exe"){
     start-process "$targetdir\$($D365VHDnaming)1.exe"
 }
+else {write-host "No EXE file found to run" -ForegroundColor yellow}
