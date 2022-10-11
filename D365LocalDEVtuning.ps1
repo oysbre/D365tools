@@ -15,18 +15,283 @@ if(get-module sqlps){"yes"}else{"no"}
  
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
-
+CLS
+Write-host "Tuning D365 environment. Please wait..." -foregroundcolor Cyan
 
 # Set the password to never expire
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+}
 
-#install d365tools and set Win Defender rules
-Install-Module -Name "d365fo.tools"
+#install d365tools and set WinDefender rules
+Install-Module -Name "d365fo.tools" -allowclobber
 Add-D365WindowsDefenderRules
+#get the encrypted password for axdbadmin
+[string[]]$Assemblies = @(
+    'C:\AOSService\webroot\bin\Microsoft.Dynamics.AX.Framework.EncryptionEngine.dll'
+) 
+
+[string]$CSSource = @" 
+using System;
+using Microsoft.Dynamics.Ax.Xpp.Security;
+namespace n201903071243 //use an odd namespace so I don't have to reload powershell each time I want to tweak this code; just tweak the NS
+{
+    public class Dfo365CertificateThumbprintProvider: Microsoft.Dynamics.Ax.Xpp.Security.ICertificateThumbprintProvider
+    {
+        public string EncryptionThumbprint {get;private set;}
+	    public string SigningThumbprint {get;private set;}
+        public Dfo365CertificateThumbprintProvider(string encryptionThumbprint, string signingThumbprint)
+        {
+            EncryptionThumbprint = encryptionThumbprint;
+            SigningThumbprint = signingThumbprint;
+        }
+    }
+    public class Dfo365EncryptionExceptionHandler: Microsoft.Dynamics.Ax.Xpp.Security.IEncryptionExceptionHandler
+    {
+        private Action<Exception> exceptionHandler;
+        public Dfo365EncryptionExceptionHandler()
+        {
+            exceptionHandler = WriteToConsoleThenThrow;
+        }
+        public Dfo365EncryptionExceptionHandler(Action<Exception> exceptionHandler)
+        {
+            this.exceptionHandler = exceptionHandler;
+        }
+        public void HandleException(Exception exception)
+        {
+            if (exceptionHandler != null)
+            {
+                exceptionHandler(exception);
+            } 
+        }
+        public static void WriteToConsoleThenThrow(Exception exception)
+        {
+            Console.WriteLine(exception.ToString());
+            throw exception;
+        }
+    }
+}
+"@ 
+
+Add-Type -ReferencedAssemblies $Assemblies -TypeDefinition $CSSource -Language 'CSharp' 
+Add-Type -Path 'C:\AOSService\webroot\bin\Microsoft.Dynamics.AX.Framework.EncryptionEngine.dll'
+
+function Decrypt-Dfo365EncryptedString {
+    [CmdletBinding(DefaultParameterSetName = 'ByEncryptionEngine')]
+    Param (
+        [Parameter(ParameterSetName = 'ByEncryptionEngine', Mandatory = $true)]
+        [Microsoft.Dynamics.Ax.Xpp.Security.EncryptionEngine]$EncryptionEngine = $null
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+        ,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]$EncryptedString
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+        if ($PSCmdlet.ParameterSetName -ne 'ByEncryptionEngine') {
+            $EncryptionEngine = New-Dfo365EncryptionEngine -WebConfig $WebConfig
+        }
+        [string]$purpose = 'PurposeName'
+    }
+    Process {
+        [byte[]]$cipher = [Convert]::FromBase64String($EncryptedString)
+        $encryptionEngine.Decrypt($cipher, $purpose)
+    }
+}
+
+function Get-Dfo365ConfigSetting {
+    [CmdletBinding(DefaultParameterSetName = 'ByPath')]
+    Param (
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+        ,
+        [Parameter(Mandatory = $true, ValueFromPipeLine = $true)]
+        [string]$PropertyName
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+    }
+    Process {
+        [string]$xpath = ("/configuration/appSettings/add[@key='{0}']/@value" -f $PropertyName) #I've not bothered adding escaping logic as key names unlikely to contain apostrophies; but may be worth adding at some point?
+        $WebConfig.SelectSingleNode($xpath) | Select-Object -ExpandProperty 'value'
+    }
+}
+function Get-Dfo365EncryptedConfigSetting {
+    [CmdletBinding(DefaultParameterSetName = 'ByPath')]
+    Param (
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+        ,
+        [Parameter(Mandatory = $true, ValueFromPipeLine = $true)]
+        [string]$PropertyName
+        ,
+        [Parameter(Mandatory = $false)]
+        [Microsoft.Dynamics.Ax.Xpp.Security.EncryptionEngine]$EncryptionEngine = $null
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+        if ($EncryptionEngine -eq $null) {
+            $EncryptionEngine = New-Dfo365EncryptionEngine -WebConfig $WebConfig
+        }
+    }
+    Process {
+        $encryptedValue = Get-Dfo365ConfigSetting -WebConfig $WebConfig -PropertyName $PropertyName
+        Decrypt-Dfo365EncryptedString -EncryptionEngine $EncryptionEngine -EncryptedString $encryptedValue
+    }
+}
+function New-Dfo365EncryptionEngine {
+    [CmdletBinding(DefaultParameterSetName = 'AllObjects')]
+    Param(
+        [Parameter(ParameterSetName = 'AllObjects', Mandatory = $true)]
+        [Parameter(ParameterSetName = 'ByPath', Mandatory = $false)]
+        [Parameter(ParameterSetName = 'ByXml', Mandatory = $false)]
+        [Microsoft.Dynamics.Ax.Xpp.Security.ICertificateThumbprintProvider]$certificateThumbprintProvider = $null
+        ,
+        [Parameter(ParameterSetName = 'AllObjects', Mandatory = $true)]
+        [Parameter(ParameterSetName = 'ByPath', Mandatory = $false)]
+        [Parameter(ParameterSetName = 'ByXml', Mandatory = $false)]
+        [System.Collections.Generic.IDictionary[[string], [string]]]$certificateHandlerSettings = $null
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+        ,
+        [Parameter(Mandatory = $false)]
+        [Microsoft.Dynamics.Ax.Xpp.Security.IEncryptionExceptionHandler]$encryptionExceptionHandler = $null #gets defaulted in the Begin block if left as null
+        ,
+        [Parameter(Mandatory = $false)]
+        [Microsoft.Dynamics.Ax.Xpp.Security.ICertificateThumbprintProvider]$legacyCertificateThumbprintProvider = $null 
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+        if ($PSCmdlet.ParameterSetName -ne 'AllObjects') {
+            if ($certificateThumbprintProvider -eq $null) {$certificateThumbprintProvider = New-CertificateThumbprintProvider -WebConfig $WebConfig}
+            if ($certificateHandlerSettings -eq $null) {$certificateHandlerSettings = New-CertificateHandlerSettings -WebConfig $WebConfig}
+            #legacyCertificateThumbprintProvider doesn't seem to be used; though has values in the web.config keys... leave as null/provided for now
+            #if ($legacyCertificateThumbprintProvider -eq $null) {$legacyCertificateThumbprintProvider = New-CertificateThumbprintProvider -WebConfig $WebConfig -EncryptionThumbprintKey 'DataAccess.DataEncryptionCertificateThumbprintLegacy' -SigningThumbprintKey 'DataAccess.DataSigningCertificateThumbprintLegacy'}
+        }
+        if ($encryptionExceptionHandler -eq $null) {$encryptionExceptionHandler = New-Dfo365EncryptionExceptionHandler}
+    }
+    Process {
+        (New-Object -TypeName 'Microsoft.Dynamics.Ax.Xpp.Security.EncryptionEngine' -ArgumentList $certificateThumbprintProvider, $encryptionExceptionHandler, $certificateHandlerSettings, $legacyCertificateThumbprintProvider)
+    }
+}
+function New-Dfo365EncryptionExceptionHandler {
+    [CmdletBinding()]
+    Param ()
+    Process {
+        (New-Object -TypeName 'n201903071243.Dfo365EncryptionExceptionHandler')
+    }
+}
+function New-CertificateThumbprintProvider {
+    [CmdletBinding(DefaultParameterSetName = 'ByPath')]
+    Param (
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+        ,
+        #make these parameters in case we want to reuse this for fetching the legacy thumprints too (i.e. to reuse for legacyCertificateThumbprintProvider)
+        [Parameter()]
+        [string]$EncryptionThumbprintKey = 'DataAccess.DataEncryptionCertificateThumbprint'
+        ,
+        [Parameter()]
+        [string]$SigningThumbprintKey = 'DataAccess.DataSigningCertificateThumbprint'
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+    }
+    Process {
+        $encr = Get-Dfo365ConfigSetting -WebConfig $WebConfig -PropertyName $EncryptionThumbprintKey
+        $sign = Get-Dfo365ConfigSetting -WebConfig $WebConfig -PropertyName $SigningThumbprintKey
+        (New-Object -TypeName 'n201903071243.Dfo365CertificateThumbprintProvider' -ArgumentList $encr, $sign)
+    }
+}
+function New-CertificateHandlerSettings {
+    [CmdletBinding(DefaultParameterSetName = 'ByPath')]
+    Param (
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+    }
+    Process {
+        [System.Collections.Generic.IDictionary[[string], [string]]]$result = New-Object -TypeName 'System.Collections.Generic.Dictionary[[string], [string]]'
+        [PSObject[]]$keyValuePairs = $WebConfig.SelectNodes("/configuration/appSettings/add[starts-with(@key,'CertificateHandler')]") | Select-Object @('key', 'value')
+        foreach ($kvp in $keyValuePairs) {
+            $result.Add($kvp.key, $kvp.value)
+        }
+        $result
+    }
+}
+
+function Get-Dfo365CredentialData {
+    [CmdletBinding(DefaultParameterSetName = 'ByPath')]
+    Param (
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByPath')]
+        [string]$PathToWebConfig = 'C:\AOSService\webroot\web.config'
+        ,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByXml')]
+        [xml]$WebConfig
+    )
+    Begin {
+        if ($PSCmdlet.ParameterSetName -eq 'ByPath') {
+            $WebConfig = [xml](Get-Content -Path $PathToWebConfig | Out-String)
+        }
+        [Microsoft.Dynamics.Ax.Xpp.Security.EncryptionEngine]$encryptionEngine = New-Dfo365EncryptionEngine -WebConfig $WebConfig
+    }
+    Process {
+        [PSObject[]]$settings = @(
+         @{Key='DataAccess.AxAdminSqlPwd';Encrypted=$true}
+        ) | ForEach-Object {(New-Object -TypeName 'PSObject' -Property $_)} 
+        $settings | ForEach-Object {
+            $setting = $_.Key
+            $value = if ($_.Encrypted -eq $true) {
+                Get-Dfo365EncryptedConfigSetting  -WebConfig $WebConfig -PropertyName $setting -EncryptionEngine $encryptionEngine
+            } else {
+                Get-Dfo365ConfigSetting -WebConfig $WebConfig -PropertyName $setting
+            }
+            (New-Object -TypeName 'PSObject' -Property @{Key=$setting;Value=$value})
+        }
+    }
+    
+}
+
+
+$sqlpwd = (Get-Dfo365CredentialData).value
 
 #Rename the server due to VisualStudio "uniqueness"
 $newname = "<newname>"
@@ -40,7 +305,7 @@ Rename-Computer -NewName $newname -force
 $sqlOldnamequery = @"
 select @@servername
 "@
-$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60 -username axdbadmin -Password AOSWebSite@123
+$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60 -username axdbadmin -Password $sqlpwd
 $sqlOldname = $sqlOldname.Column1
 if ($sqlOldname -ne $newname){
 $sqlRename = @"
@@ -49,7 +314,7 @@ GO
 sp_addserver [$newname], local;
 GO
 "@
-Invoke-SqlCmd -Query $sqlRename -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 60 -username axdbadmin -Password AOSWebSite@123
+Invoke-SqlCmd -Query $sqlRename -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 60 -username axdbadmin -Password $sqlpwd
 }
 }#end set servername from MS default
 
@@ -71,7 +336,6 @@ Else {
     Write-Host "Installing Chocolatey"
 
     Set-ExecutionPolicy Bypass -Scope Process -Force; 
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; 
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     #Determine choco executable location
