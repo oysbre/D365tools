@@ -13,7 +13,7 @@ function Get-UrlStatusCode([string] $Urlcheck) {
     catch [Net.WebException]  { [int]$_.Exception.Response.StatusCode  }
 }#end function URL test
 
-if ($localfile -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: c:\temp\SU10028.zip in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
+if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: c:\temp\SU10028.zip in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
 #Install/update AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
     write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
