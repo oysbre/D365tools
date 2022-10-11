@@ -18,7 +18,8 @@ Import-Module-SQLPS
 CLS
 Write-host "Tuning D365 environment. Please wait..." -foregroundcolor Cyan
 
-# Set the password to never expire
+#Set the password to never expire
+write-host "Set the password to never expire for user Administrator..." -foregroundcolor Yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
@@ -27,9 +28,12 @@ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
 #install d365tools and set WinDefender rules
+write-host "install d365tools and set WinDefender rules..." -foregroundcolor Yellow
 Install-Module -Name "d365fo.tools" -allowclobber
 Add-D365WindowsDefenderRules
+
 #get the encrypted password for axdbadmin
+write-host "get the encrypted password for axdbadmin..." -foregroundcolor Yellow
 [string[]]$Assemblies = @(
     'C:\AOSService\webroot\bin\Microsoft.Dynamics.AX.Framework.EncryptionEngine.dll'
 ) 
@@ -290,8 +294,8 @@ function Get-Dfo365CredentialData {
     
 }
 
-
 $sqlpwd = (Get-Dfo365CredentialData).value
+write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 
 #Rename the server due to VisualStudio "uniqueness"
 $newname = "<newname>"
@@ -371,7 +375,7 @@ Else {
 #end install packages
 
 #install storage emulator
-write-host "Installing Azure storage emulator"
+write-host "Installing Azure storage emulator..." -foregroundcolor yellow
 (new-object System.Net.WebClient).DownloadFile('https://go.microsoft.com/fwlink/?linkid=717179&clcid=0x409', "$env:temp\microsoftazurestorageemulator.msi");
 
 & "$env:temp\microsoftazurestorageemulator.msi" /quiet
@@ -509,17 +513,21 @@ Write-Host ""
 
 #AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
-Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
-Unblock-File $env:temp\AzCopy.zip
-Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
-Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe"
-remove-item $env:temp\AzCopy.zip -force
-remove-item $env:temp\AzCopy -force -Recurse
+	Write-host "Installing AzCopy..." -foregroundcolor Yellow
+	$ProgressPreference = 'SilentlyContinue'
+	Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+	Unblock-File $env:temp\AzCopy.zip
+	Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
+	Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe"
+	remove-item $env:temp\AzCopy.zip -force
+	remove-item $env:temp\AzCopy -force -Recurse
 }
 else {
-$azcopyupdate = & azcopy -h | select-string -pattern "newer version"
+    $azcopyupdate = & azcopy -h | select-string -pattern "newer version"
     if ($azcopyupdate){
-     Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    Write-host "Updating AzCopy..." -foregroundcolor Yellow
+    $ProgressPreference = 'SilentlyContinue'
+    Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
     Unblock-File $env:temp\AzCopy.zip
     Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
     Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
@@ -534,6 +542,7 @@ New-Item -Path "c:\temp" -Name "dixf" -ItemType "directory"
 }
 
 #set timezone
+Write-host "Set timezone to W. Europe Standard Time..." -foregroundcolor Yellow
 & tzutil  /s "W. Europe Standard Time"
 
 write-host "All set. Restart the computer by pressing any key" -foregroundcolor Cyan
