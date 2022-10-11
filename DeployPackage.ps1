@@ -1,33 +1,11 @@
 #This script automatically deploy packages on DEV. Requires Admin session
-#Put the script in the same folder where det deployable package is. Only one ZIP file per folder.
-#The scripts extracts the deployablepackage ZIP file to c:\pck\<deploypackagefolder> and deploys the package
+#Put the script in the same folder where the deployablepackage is. Only one ZIPfile per folder!
+#the Process extracts the deployablepackage ZIP file to c:\pck\<deploypackagefolder> and deploys the package
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
-#install nuget minimum
-if (!((Get-PackageProvider nuget).version -ge "2.8.5.201")){
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
-}
-#install 7zip module for PowerShell
-if (!(get-installedmodule 7Zip4PowerShell -ea 0)){
-    Install-Module -Name 7Zip4PowerShell -Confirm:$False -Force
-}
-#Check if VS and/or SSMS is running
-$vs = get-process devenv -ea 0
-$ssms = get-process ssms -ea 0
-if ($vs -or $ssms){
-$vskill = read-host "Visual Studio and/or SSMS is running. End process? (Y/N)"
-    if ($vskill -eq "y"){
-        if ($vs){get-process devenv -ea 0| stop-process}
-        if ($ssms){get-process ssms -ea 0| stop-process} 
-        }
-    else{write-host "Close Visual Studio and/or SSMS before continuing." -ForegroundColor red;
-    if ($vs){Wait-Process -InputObject $vs;}
-    if ($ssms){Wait-Process -InputObject $ssms;}
-    }
-}
 
 #Region Parameters
 $remotedir = $PSCommandPath | Split-Path -Parent
-$localpackagepath = "C:\Pck"
+$localpackagepath = "C:\Pck"  #change this if needed
 $sourceExtension = ".zip"
 $sourceFolder = $remotedir
 
@@ -47,6 +25,7 @@ $executionLogPrefix = "PU"
 $executionLogSuffix = "-executionLog"
 #EndRegion Parameters
 cls
+
 Write-host "-----Variables-----" -ForegroundColor Magenta 
 $sourcePath
 $targetPath
@@ -56,6 +35,30 @@ $runbookPath
 $updateInstallerPath
 $executionLogPath
 
+
+#install nuget minimum
+if (!((Get-PackageProvider nuget).version -ge "2.8.5.201")){
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
+}
+
+#install 7zip module for PowerShell
+if (!(get-installedmodule 7Zip4PowerShell -ea 0)){
+    Install-Module -Name 7Zip4PowerShell -Confirm:$False -Force
+}
+
+#Check if VS and/or SSMS is running
+$vs = get-process devenv -ea 0;$ssms = get-process ssms -ea 0
+if ($vs -or $ssms){
+$vskill = read-host "Visual Studio and/or SSMS is running. End process? (Y/N)"
+    if ($vskill -eq "y"){
+        if ($vs){get-process devenv -ea 0| stop-process}
+        if ($ssms){get-process ssms -ea 0| stop-process} 
+        }
+    else{write-host "Close Visual Studio and/or SSMS before continuing." -ForegroundColor red;
+    if ($vs){Wait-Process -InputObject $vs;}
+    if ($ssms){Wait-Process -InputObject $ssms;}
+    }
+}#end if processcheck
     
 $sourceFile = get-childitem -path $sourceFolder -filter *.zip | sort lastwritetime | select -last 1
 $global:sourcePath = Join-Path $sourceFolder $sourceFile
