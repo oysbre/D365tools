@@ -71,23 +71,19 @@ if (!(test-path "C:\windows\AzCopy.exe")){write-host "AzCopy not installed. Run 
 #Download files
 $i = 1
 foreach ($url in $URLS){
-$statuscode = ""
-    if ($i -eq 1){
-            $statuscode= Get-UrlStatusCode -urlcheck $url
-            if ($statuscode -eq 200){
-                azcopy copy $url "$targetdir\$($D365VHDnaming)$i.exe"
-                unblock-file "$targetdir\$($D365VHDnaming)$i.exe"
-            }
-            else {write-host "Check the SAS link $($URL). Error : "$statuscode -foregroundcolor Red}
-    }
-    else {
-            $statuscode= Get-UrlStatusCode -urlcheck $url
-            if ($statuscode -eq 200){
-                azcopy copy $url "$targetdir\$($D365VHDnaming)$i.rar"
-                unblock-file "$targetdir\$($D365VHDnaming)$i.rar" 
-            }
-            else {write-host "Check the SAS link $($URL). Error : "$statuscode -foregroundcolor Red}
-    }
+    $statuscode = ""
+    $statuscode= Get-UrlStatusCode -urlcheck $url
+    if ($statuscode -eq 200){
+        if ($i -eq 1){
+            azcopy copy $url "$targetdir\$($D365VHDnaming)$i.exe"
+            unblock-file "$targetdir\$($D365VHDnaming)$i.exe"
+        }
+        else {
+            azcopy copy $url "$targetdir\$($D365VHDnaming)$i.rar"
+            unblock-file "$targetdir\$($D365VHDnaming)$i.rar" 
+        }
+    }#end if status -eq 200
+    else {write-host "Check the SAS link $($URL). Error : "$statuscode -foregroundcolor Red}
     $i++
 }#end foreach $url
 
