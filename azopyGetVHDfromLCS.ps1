@@ -1,4 +1,4 @@
-#SCript to download VHD from LCS Shared library using AzCopy
+#Powershellscript to download VHD from LCS Shared library using AzCopy
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 #set target downloadpath 
 $targetdir = "<targetdir>"
