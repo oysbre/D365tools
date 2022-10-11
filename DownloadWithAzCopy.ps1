@@ -4,7 +4,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 #Region variables
-$LCSURI = "<paste URL with SAS here>"
+$URL = "<paste URL here>"
 $localfilename = "<local fullpathname here>"
 
 #Begin
@@ -39,11 +39,11 @@ if ($azcopyupdate){
     }
 }#end AZcopy  
 
-#download from SAS2Local
-$statuscode = Get-UrlStatusCode -urlcheck $LCSURI
+#download from URL2Local
+$statuscode = Get-UrlStatusCode -urlcheck $URL
 if ($statuscode -eq 200){
- azcopy copy $LCSURI $localfilename
+ azcopy copy $URL $localfilename
 }
-else {write-host "Error in URL: " $($statuscode)}
+else {write-host "Error in URL $($url ): " $($statuscode)}
 pause
 
