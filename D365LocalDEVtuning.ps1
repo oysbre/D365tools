@@ -5,20 +5,22 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 
 #Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 function Import-Module-SQLPS {
      push-location
     import-module sqlps 3>&1 | out-null
     pop-location
-}
+}#End function Import-Module-SQLPS
 if(get-module sqlps){"yes"}else{"no"}
  Import-Module-SQLPS
  
 if(get-module sqlps){"yes"}else{"no"}
+#Import SQL PS commands
 Import-Module-SQLPS
 CLS
 Write-host "Tuning D365 environment. Please wait..." -foregroundcolor Cyan
 
-#Set the password to never expire
+#Set the password for Administrator account to never expire
 write-host "Set the password to never expire for user Administrator..." -foregroundcolor Yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 
@@ -27,8 +29,8 @@ if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
-#install d365tools and set WinDefender rules
-write-host "install d365tools and set WinDefender rules..." -foregroundcolor Yellow
+#Install d365tools and set WinDefender rules
+write-host "Iinstalling D365fo.tools and set WinDefender rules..." -foregroundcolor Yellow
 Install-Module -Name "d365fo.tools" -allowclobber
 Add-D365WindowsDefenderRules
 
@@ -296,6 +298,7 @@ function Get-Dfo365CredentialData {
 
 $sqlpwd = (Get-Dfo365CredentialData).value
 write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
+#END Get the encrypted password for axdbadmin
 
 #Rename the server due to VisualStudio "uniqueness"
 $newname = "<newname>"
