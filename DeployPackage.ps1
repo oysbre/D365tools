@@ -26,16 +26,6 @@ $executionLogSuffix = "-executionLog"
 #EndRegion Parameters
 cls
 
-Write-host "-----Variables-----" -ForegroundColor Magenta 
-$sourcePath
-$targetPath
-$topologyPath
-$runbookId
-$runbookPath
-$updateInstallerPath
-$executionLogPath
-
-
 #install nuget minimum
 if (!((Get-PackageProvider nuget).version -ge "2.8.5.201")){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
@@ -74,7 +64,16 @@ $global:runbookPath = Join-Path $targetPath $runbookFile
 $global:topologyPath = Join-Path $targetPath $topologyFile
 $executionLogFile = $executionLogPrefix + $renamedsourceFile + $executionLogSuffix + $executionLogExtension
 $global:executionLogPath = Join-Path $targetBaseFolder $executionLogFile
- 
+
+Write-host "-----Variables-----" -ForegroundColor Magenta 
+$sourcePath
+$targetPath
+$topologyPath
+$runbookId
+$runbookPath
+$updateInstallerPath
+$executionLogPath 
+
 Function ExtractFiles {
     Write-Host "Extracting $sourcePath to $targetPath..." -foregroundcolor Yellow
     Unblock-File $sourcePath
