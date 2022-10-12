@@ -20,10 +20,14 @@ $URLS = @(
 <#8#> "https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/4a3245d1-42ee-4c96-92f3-3a258cb38946/AX7ProductName-12-b89ea019-51cb-466a-b9a4-fa155ea737f0?sv=2018-03-28&sr=b&sig=tLZ%2FfccaO3gEKOPooVNmQxb1a9YyL3GJHobGUz0o%2BV0%3D&se=2022-10-09T12%3A16%3A37Z&sp=r",
 <#9#> "https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/5b408482-8f19-45d8-8693-7605011f2ca2/AX7ProductName-12-44bd1268-cbd8-4558-a447-e22c65821f97?sv=2018-03-28&sr=b&sig=IYcbogE%2F8fR9hbcKsX%2F7X6rr1yFQFDOGCYYy1mQeNR4%3D&se=2022-10-09T12%3A16%3A48Z&sp=r"
 )
-#--------------------------------------
+
+#-----------Begin--------------------------------------
 #Force https over TLS12 protocol
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-#Begin
+
+$targetdir = $targetdir.TrimEnd('\')
+if (!(test-path $targetdir)){new-item $targetdir -itemtype directory}
+
 function Get-UrlStatusCode([string] $Urlcheck) {
     try {  (Invoke-WebRequest -Uri $Urlcheck -UseBasicParsing -DisableKeepAlive -method head).StatusCode }
     catch [Net.WebException]  { [int]$_.Exception.Response.StatusCode  }
