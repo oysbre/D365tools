@@ -44,7 +44,7 @@ $vskill = read-host "Visual Studio and/or SSMS is running. End process? (Y/N)"
         if ($vs){get-process devenv -ea 0| stop-process}
         if ($ssms){get-process ssms -ea 0| stop-process} 
         }
-    else{write-host "Close Visual Studio and/or SSMS before continuing." -ForegroundColor red;
+    else{write-host "Close Visual Studio and/or SSMS before continuing." -ForegroundColor Cyan;
     if ($vs){Wait-Process -InputObject $vs;}
     if ($ssms){Wait-Process -InputObject $ssms;}
     }
