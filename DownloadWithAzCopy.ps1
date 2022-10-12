@@ -7,13 +7,14 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 $URL = "<paste URL here>"
 $localfilename = "<local fullpathname here>"
 
-#Begin
+#--------Begin---------
 function Get-UrlStatusCode([string] $Urlcheck) {
     try {  (Invoke-WebRequest -Uri $Urlcheck -UseBasicParsing -DisableKeepAlive -method head).StatusCode }
     catch [Net.WebException]  { [int]$_.Exception.Response.StatusCode  }
 }#end function URL test
 
 if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: c:\temp\SU10028.zip in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
+
 #Install/update AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
     write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
@@ -37,7 +38,7 @@ if ($azcopyupdate){
     remove-item $env:temp\AzCopy.zip -force
     remove-item $env:temp\AzCopy -force -Recurse
     }
-}#end AZcopy  
+}#end AzCopy  
 
 #download from URL2Local
 $statuscode = Get-UrlStatusCode -urlcheck $URL
