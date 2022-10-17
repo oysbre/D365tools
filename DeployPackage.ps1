@@ -35,6 +35,31 @@ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$F
 if (!(get-installedmodule 7Zip4PowerShell -ea 0)){
     Install-Module -Name 7Zip4PowerShell -Confirm:$False -Force
 }
+#Check Azure Storage Emulator status
+$azsever =  & 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' status| select -first 1
+if ($azsever -notmatch "5.10"){
+    #install storage emulator if it's older than 5.10
+    write-host "Installing Azure storage emulator 5.10..." -foregroundcolor yellow
+    (new-object System.Net.WebClient).DownloadFile('https://go.microsoft.com/fwlink/?linkid=717179&clcid=0x409', "$env:temp\microsoftazurestorageemulator.msi");
+
+    start-process  "$env:temp\microsoftazurestorageemulator.msi" -argumentlist "/quiet" -wait
+    remove-item "$env:temp\microsoftazurestorageemulator.msi" -force
+}
+$azsestatus= & 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' status| select -skip 1 -first 1
+if ($azsestatus -match 'False'){ 
+write-host "Azure Storage Emulator must be running: " $azsestatus
+Get-Process "AzureStorageEmulator" -ea 0 | Stop-Process -force
+start-process 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' -argumentlist "clean" 
+start-process 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' -argumentlist "init -forceCreate" -PassThru
+start-sleep -s 15
+start-process 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' -argumentlist "start" -PassThru
+start-sleep -s 15
+}
+$azsestatus= & 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' status| select -skip 1 -first 1
+if ($azsestatus -match 'False'){
+write-host "Azure Storage Emulator is not running or else Retail step 5x will fail. Either fix AzureStorageEmulator or skip step" -ForegroundColor red 
+}
+else {write-host  "Azure Storage Emulator status: " $azsestatus }
 
 #Check if VS and/or SSMS is running
 $vs = get-process devenv -ea 0;$ssms = get-process ssms -ea 0
