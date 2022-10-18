@@ -7,7 +7,7 @@ $D365VHDnaming = "D365VHD-10_0_24_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
 #Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
-#Place SAS URLs in right order in variable $URLS starting from nr 1.
+#Place SAS URLs in right order in variable $URLS starting from VHD part nr 1.
 #Save the script and run it!
 $URLS = @(
 <#1#> "https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/4aa6d00a-a25b-44f0-a1b8-b3bdba026965/AX7ProductName-12-2002b597-d8f1-4b98-8edd-a5e2dbc475e0?sv=2018-03-28&sr=b&sig=zBIkSaIjjpBhrqLfWA18JYFeoW%2FnVLH0nyE7bMJ5%2BK8%3D&se=2022-10-09T12%3A15%3A00Z&sp=r" 
