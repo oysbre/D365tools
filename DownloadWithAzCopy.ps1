@@ -4,8 +4,8 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 #Region variables
-$URL = "<paste URL here>"
-$localfilename = "<local fullpathname here>"
+$URL = "<paste URL here>"  # << In LCS, mark the package for donwload on the far left and then generate SAS link button will appear.
+$localfilename = "<local fullpathname here>"  # << full local filepath aka c:\temp\SU10.0.xx.zip
 
 #--------Begin---------
 function Get-UrlStatusCode([string] $Urlcheck) {
