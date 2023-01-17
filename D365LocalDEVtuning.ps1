@@ -29,6 +29,28 @@ if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
+$unsetcmd = @'
+#Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
+If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
+@("*.rdl","*.log","*.xml","*.txt") | foreach {Get-ChildItem -Path "$env:servicedrive\AosService\PackagesLocalDirectory\*" -Recurse -Filter "$_" | foreach { $_.IsReadOnly=$False }}
+'@
+
+$StopServicesCmd = @'
+If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
+@("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {stop-service -name "$_" -force}
+'@
+
+$StartServicesCmd = @'
+If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
+@("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {start-service -name "$_" }
+'@
+
+#Create powershellscripts on Desktop to start/stop services used before DB sync
+$DesktopPath = [Environment]::GetFolderPath("Desktop")
+Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
+Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
+Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
+
 #Install d365tools and set WinDefender rules
 write-host "Iinstalling D365fo.tools and set WinDefender rules..." -foregroundcolor Yellow
 Install-Module -Name "d365fo.tools" -allowclobber
