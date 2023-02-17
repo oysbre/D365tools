@@ -5,7 +5,8 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 
 # Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
- 
+$ProgressPreference = 'SilentlyContinue'
+
 function Import-Module-SQLPS {
      push-location
     import-module sqlps 3>&1 | out-null
@@ -69,6 +70,7 @@ function Set-RegistryValueForAllUsers {
     } 
 }#end function "Set-RegistryValueForAllUsers"
 
+#Herestrings for Powershellscripts
 $unsetcmd = @'
 #Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
@@ -86,6 +88,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 '@
 
 #Create powershellscripts on Desktop to start/stop services used before DB sync
+Write-host "Creating powershellscripts on Desktop to start/stop services used before DB sync" -foregroundcolor yellow
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
@@ -193,10 +196,12 @@ Write-Host ""
 }#end $account check empty
 #End SQLservice account VolMaintask
 
-# Set the password to never expire
+#Set the password to never expire
+Write-host "Set account password to never expire" -foregroundcolor yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 
 #set powercfg
+Write-host "Set Powercfg til High Performance" -foregroundcolor yellow
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 write-host "Installing Powershell module d365fo.tools and setting WinDefender rules" -ForegroundColor yellow
@@ -205,6 +210,7 @@ Add-D365WindowsDefenderRules
 write-host "Installed Powershell module d365fo.tools" -ForegroundColor Green
 
 #Use IIS instead of IIS Express
+Write-host "Use IIS instead of IIS Express" -foregroundcolor yellow
 if (test-path "$env:servicedrive\AOSService\PackagesLocalDirectory\bin\DynamicsDevConfig.xml"){
 [xml]$xmlDoc = Get-Content "$env:servicedrive\AOSService\PackagesLocalDirectory\bin\DynamicsDevConfig.xml"
 if ($xmlDoc.DynamicsDevConfig.RuntimeHostType -ne "IIS"){
@@ -227,6 +233,7 @@ Else {
 
     Set-ExecutionPolicy Bypass -Scope Process -Force; 
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; 
+    
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     #Determine choco executable location
@@ -288,7 +295,7 @@ catch {
 #end install EDGE
 
 
-#Install AzCopy
+#Install/Update AzCopy to C:\windows
 if (!(test-path "C:\windows\AzCopy.exe")){
 remove-item "$env:temp\AzCopy.zip" -force -ea 0
 Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile "$env:temp\AzCopy.zip" -UseBasicParsing
