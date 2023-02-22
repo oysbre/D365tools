@@ -196,6 +196,23 @@ Write-Host ""
 }#end $account check empty
 #End SQLservice account VolMaintask
 
+#Get server mem in MB and set SQL instance max memory 1/4 of that
+$sysraminMB =  Get-WmiObject -class "cim_physicalmemory" | Measure-Object -Property Capacity -Sum | % {[Math]::Round($_.sum/1024/1024/4)}
+If ($sysraminmb){
+$sqlQmaxmem = @"
+sp_configure 'show advanced options', 1;
+GO
+RECONFIGURE;
+GO
+sp_configure 'max server memory', $sysraminMB;
+GO
+RECONFIGURE;
+GO
+"@
+Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
+Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
+}
+
 #Set the password to never expire
 Write-host "Set account password to never expire" -foregroundcolor yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
