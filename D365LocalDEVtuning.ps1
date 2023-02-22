@@ -418,6 +418,7 @@ GO
 RECONFIGURE;
 GO
 "@
+Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
 Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }
 
