@@ -213,6 +213,18 @@ Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB
 Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }#end if $sysmeminMB
 
+#Install VS menu extension
+$vsixmenuurl = "https://evgeny.gallerycdn.vsassets.io/extensions/evgeny/restoreextensions/1.0.2/1556184103349/RestoreExtensions-v1.0.2.vsix"
+Invoke-WebRequest -Uri "$vsixmenuurl" -OutFile "$env:temp\RestoreExtensions-v1.0.2.vsix" -UseBasicParsing
+#Expand Archive
+if (test-path "$env:temp/RestoreExtensions-v1.0.2.vsix"){
+unblock-file "$env:temp/RestoreExtensions-v1.0.2.vsix"
+write-host "Installing VS menuextension" -foregroundcolor yellow
+$vsixinstaller = Get-ChildItem -Path  "${Env:ProgramFiles(x86)}\Microsoft Visual Studio" -recurse | Where-Object {$_.name -eq "vsixinstaller.exe"} | Sort-Object LastWriteTime -Descending | Select-Object -exp fullname -First 1
+$vsargs = "/q $env:temp/RestoreExtensions-v1.0.2.vsix"
+start-process $vsixinstaller -argumentlist $vsargs -wait
+}
+
 #Set the password to never expire
 Write-host "Set account password to never expire" -foregroundcolor yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
