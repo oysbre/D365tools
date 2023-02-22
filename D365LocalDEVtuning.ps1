@@ -405,8 +405,8 @@ write-host "Installing Azure storage emulator..." -foregroundcolor yellow
 
 & "$env:temp\microsoftazurestorageemulator.msi" /quiet
 
-#Get server mem and set SQL instance max mem
-$sysraminMB = gwmi Win32_OperatingSystem | Measure-Object -Property TotalVisibleMemorySize -Sum | % {[Math]::Round($_.sum/1024/3)}
+#Get server mem in MB and set SQL instance max memory 1/4 of that
+$sysraminMB =  Get-WmiObject -class "cim_physicalmemory" | Measure-Object -Property Capacity -Sum | % {[Math]::Round($_.sum/1024/1024/4)}
 If ($sysraminmb){
 $sqlQmaxmem = @"
 sp_configure 'show advanced options', 1;
@@ -418,7 +418,7 @@ GO
 RECONFIGURE;
 GO
 "@
-Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem  -ErrorAction continue -querytimeout 20
+Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }
 
 #Enable TraceFlags on SQL instances
