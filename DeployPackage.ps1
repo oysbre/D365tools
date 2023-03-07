@@ -1,6 +1,8 @@
 #This script automatically deploy packages on DEV. Requires Admin session
-#Put the script in the same folder where the deployablepackage is. Only one ZIPfile per folder!
-#the Process extracts the deployablepackage ZIP file to c:\pck\<deploypackagefolder> and deploys the package
+#Put this script in the same folder where the deployablepackage is. Only one ZIP file per folder!
+#The process extracts the deployablepackage ZIP file to c:\pck\<deploypackagefolder> and deploys the package
+#The script handles the ReportingService "bug" during deploy where it starts the service during DB sync.
+#It also checks that the "Azure Storage emulator" is up and running which is required for Retail step
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 
 #Region Parameters
@@ -41,9 +43,11 @@ if ($azsever -notmatch "5.10"){
     #install storage emulator if it's older than 5.10
     write-host "Installing Azure storage emulator 5.10..." -foregroundcolor yellow
     (new-object System.Net.WebClient).DownloadFile('https://go.microsoft.com/fwlink/?linkid=717179&clcid=0x409', "$env:temp\microsoftazurestorageemulator.msi");
-
-    start-process  "$env:temp\microsoftazurestorageemulator.msi" -argumentlist "/quiet" -wait
-    remove-item "$env:temp\microsoftazurestorageemulator.msi" -force
+    if (test-path $env:temp\microsoftazurestorageemulator.msi){
+        unblock-file $env:temp\microsoftazurestorageemulator.msi
+        start-process  "$env:temp\microsoftazurestorageemulator.msi" -argumentlist "/quiet" -wait
+        remove-item "$env:temp\microsoftazurestorageemulator.msi" -force
+    }#end testpath Storageemulrator msifile
 }
 $azsestatus= & 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' status| select -skip 1 -first 1
 if ($azsestatus -match 'False'){ 
@@ -57,7 +61,7 @@ start-sleep -s 15
 }
 $azsestatus= & 'C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe' status| select -skip 1 -first 1
 if ($azsestatus -match 'False'){
-write-host "Azure Storage Emulator is not running or else Retail step 5x will fail. Either fix AzureStorageEmulator or skip step" -ForegroundColor red 
+write-host "Azure Storage Emulator is not running. Retail step 5x will probably fail. Either fix AzureStorageEmulator or skip step" -ForegroundColor red 
 }
 else {write-host  "Azure Storage Emulator status: " $azsestatus }
 
