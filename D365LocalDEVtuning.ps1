@@ -21,8 +21,9 @@ CLS
 Write-host "Tuning D365 environment. Please wait..." -foregroundcolor Cyan
 
 #Set the password for Administrator account to never expire
-write-host "Set the password to never expire for user Administrator..." -foregroundcolor Yellow
+write-host "Set the password to never expire for user Administrator and current user..." -foregroundcolor Yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
+Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
@@ -52,7 +53,7 @@ Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
 #Install d365tools and set WinDefender rules
-write-host "Iinstalling D365fo.tools and set WinDefender rules..." -foregroundcolor Yellow
+write-host "Installing Powershell module D365FO.tools and set WinDefender rules..." -foregroundcolor Yellow
 Install-Module -Name "d365fo.tools" -allowclobber
 Add-D365WindowsDefenderRules
 
@@ -324,7 +325,7 @@ write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 
 #Rename the server due to VisualStudio "uniqueness"
 $newname = "<newname>"
-If ($env:computername -like "MININT*"){
+If (($env:computername -like "MININT*") -or ($env:computername -like "DVHD100*"){
 If ($newname -eq "<newname>"){ $newname = read-host "New name not set. Set new:"}
 if ($env:computername -ne $newname){
 $ans= read-host "Changing $($env:computername) to $($newname)? (y/n)" 
@@ -347,8 +348,10 @@ Invoke-SqlCmd -Query $sqlRename -Database master -ServerInstance localhost -Erro
 }
 }#end set servername from MS default
 
-#disable UAC
+#Disable RealTime monitoring
 Set-MpPreference -DisableRealtimeMonitoring $true
+
+#Disable UAC
 Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System -Name EnableLUA -Value 0
 
 #Set powerplan to HIGH PERFORMANCE
