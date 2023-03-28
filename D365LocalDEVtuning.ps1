@@ -7,12 +7,13 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Import-Module-SQLPS {
-     push-location
-    import-module sqlps 3>&1 | out-null
-    pop-location
+push-location
+import-module sqlps 3>&1 | out-null
+pop-location
 }#End function Import-Module-SQLPS
+
 if(get-module sqlps){"yes"}else{"no"}
- Import-Module-SQLPS
+Import-Module-SQLPS
  
 if(get-module sqlps){"yes"}else{"no"}
 #Import SQL PS commands
@@ -354,18 +355,18 @@ $sqlpwd = (Get-Dfo365CredentialData).value
 write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 #END Get the encrypted password for axdbadmin
 
-#Rename the server due to VisualStudio "uniqueness"
+#Rename server due to DevOPS/VisualStudio "uniqueness"
 $newname = "<newname>"
-If (($env:computername -like "MININT*") -or ($env:computername -like "DVHD100*"){
+If (($env:computername -like "MININT*") -or ($env:computername -like "DVHD100*")){
 If ($newname -eq "<newname>"){ $newname = read-host "New name not set. Set new:"}
 $sqlOldnamequery = @'
 SELECT @@SERVERNAME as servername
 '@
-$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60 #-username axdbadmin -Password $sqlpwd
+$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60
 $env:COMPUTERNAME = $sqlOldname.servername
 Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "ReportServer" 
 }
-#end set servername from MS default
+#End set servername from MS default
 
 #Disable RealTime monitoring
 Set-MpPreference -DisableRealtimeMonitoring $true
