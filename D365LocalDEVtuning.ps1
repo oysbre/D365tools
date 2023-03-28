@@ -358,26 +358,14 @@ write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 $newname = "<newname>"
 If (($env:computername -like "MININT*") -or ($env:computername -like "DVHD100*"){
 If ($newname -eq "<newname>"){ $newname = read-host "New name not set. Set new:"}
-if ($env:computername -ne $newname){
-$ans= read-host "Changing $($env:computername) to $($newname)? (y/n)" 
-Rename-Computer -NewName $newname -force 
+$sqlOldnamequery = @'
+SELECT @@SERVERNAME as servername
+'@
+$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60 #-username axdbadmin -Password $sqlpwd
+$env:COMPUTERNAME = $sqlOldname.servername
+Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "ReportServer" 
 }
-Rename-Computer -NewName $newname -force 
-$sqlOldnamequery = @"
-select @@servername
-"@
-$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60 -username axdbadmin -Password $sqlpwd
-$sqlOldname = $sqlOldname.Column1
-if ($sqlOldname -ne $newname){
-$sqlRename = @"
-sp_dropserver [$sqlOldname];
-GO
-sp_addserver [$newname], local;
-GO
-"@
-Invoke-SqlCmd -Query $sqlRename -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 60 -username axdbadmin -Password $sqlpwd
-}
-}#end set servername from MS default
+#end set servername from MS default
 
 #Disable RealTime monitoring
 Set-MpPreference -DisableRealtimeMonitoring $true
