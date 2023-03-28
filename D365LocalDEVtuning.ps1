@@ -46,6 +46,37 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 @("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {start-service -name "$_" }
 '@
 
+#Create Scheduletask and rearmscript under c:\D365scripts to check "rearm" Windows during logon
+$rearmscript = @'
+#Check rearmcount
+[string]$slmgrRearmcount = (cscript c:\windows\system32\slmgr.vbs /dlv | select-string -pattern "Remaining Windows rearm count")
+$rearmCount = $slmgrRearmcount.split(":")[1].trim()
+$slmgrXprResult = cscript c:\windows\system32\slmgr.vbs /xpr
+[string]$licenseStatus = ($slmgrXprResult | select-string -pattern "Timebased")
+$licenseExprDate = [datetime]$LicenseStatus.Remove(0,36).trim()
+$todaydate = get-date
+$daysleft = (new-timespan -start $todaydate -end $licenseExprDate).days
+if ($daysleft -lt 1 -and $rearmCount -ne 0) {write-host "Re-arming license";cscript c:\windows\system32\slmgr.vbs /rearm;restart-computer }
+elseif ($rearmCount -eq 0 -and $daysleft -lt 5){
+$ButtonType = [System.Windows.Forms.MessageBoxButtons]::OK
+$MessageIcon = [System.Windows.Forms.MessageBoxIcon]::Information
+$MessageBody = "No re-arm left. Create new DEV box. License expire in $($daysleft) days."
+$MessageTitle = "Re-arm"
+$Result = [System.Windows.Forms.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+'@
+if (-not(test-path "c:\D365scripts")){new-item -ItemType directory -Path "c:\D365scripts"}
+Unregister-ScheduledTask -TaskName 'Auto Rearm' -Confirm:$false -ea 0
+remove-item "c:\D365scripts\rearm.ps1" -force -ea 0
+$rearmscript | out-file -filepath c:\D365scripts\rearm.ps1 -encoding utf8 -force -Width 2147483647
+[string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "C:\knowit\rearm.ps1"'
+$Action = New-ScheduledTaskAction -Execute '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe' -Argument $sch_args
+$Trigger = New-ScheduledTaskTrigger -atlogon
+$Trigger.Delay = 'PT1M'
+$Settings = New-ScheduledTaskSettingsSet
+$Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
+Register-ScheduledTask -TaskName 'Auto Rearm' -InputObject $Task -User "System"
+
 #Create powershellscripts on Desktop to start/stop services used before DB sync
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
