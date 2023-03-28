@@ -364,7 +364,7 @@ SELECT @@SERVERNAME as servername
 '@
 $sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60
 $env:COMPUTERNAME = $sqlOldname.servername
-Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "ReportServer" 
+Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "DynamicsAxReportServer" 
 }
 #End set servername from MS default
 
