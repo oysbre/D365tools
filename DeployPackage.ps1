@@ -107,6 +107,7 @@ Function ExtractFiles {
     Write-Host "Extracting $sourcePath to $targetPath..." -foregroundcolor Yellow
     Unblock-File $sourcePath
     Expand-7Zip -ArchiveFileName $sourcePath -TargetPath $targetPath
+    remove-item $sourcePath -force -ea 0
     [xml]$xml = get-content "$targetPath\HotfixInstallationInfo.xml"
     $PlatformVersion = Select-Xml "//Release" $xml | select -first 1 | % {$_.Node.'#text'}
     write-host "PU version: $($PlatformVersion)" -ForegroundColor Green
