@@ -86,8 +86,8 @@ Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
 #Download powershellscripts for packagedeploy and LCS download
-iwr "https://github.com/oysbre/D365tools/blob/main/DeployPackage.ps1" -outfile "c:\D365scripts\DeployPackage.ps1"
-iwr "https://github.com/oysbre/D365tools/blob/main/DownloadWithAzCopy.ps1" -outfile "c:\D365scripts\DownloadWithAzCopy.ps1"
+iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DeployPackage.ps1" -outfile "c:\D365scripts\DeployPackage.ps1"
+iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "c:\D365scripts\DownloadWithAzCopy.ps1"
 
 #Install d365tools and set WinDefender rules
 write-host "Installing Powershell module D365FO.tools and set WinDefender rules..." -foregroundcolor Yellow
