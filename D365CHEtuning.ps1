@@ -112,7 +112,7 @@ if(get-module sqlps){"yes"}else{"no"}
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
 cls
-write-host "Running DEV optimizing script..." -ForegroundColor Magenta
+write-host "Running DEV optimizing script..." -ForegroundColor Yellow
 #add SQL service account to Perform volume maint task
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
@@ -228,6 +228,7 @@ start-process $vsixinstaller -argumentlist $vsargs -wait
 #Set the password to never expire
 Write-host "Set account password to never expire" -foregroundcolor yellow
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
+Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
 #set powercfg
 Write-host "Set Powercfg til High Performance" -foregroundcolor yellow
