@@ -5,12 +5,13 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 
 #Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ProgressPreference = 'SilentlyContinue'
 
 function Import-Module-SQLPS {
 push-location
 import-module sqlps 3>&1 | out-null
 pop-location
-}#End function Import-Module-SQLPS
+}#end function Import-Module-SQLPS
 
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
@@ -19,7 +20,7 @@ if(get-module sqlps){"yes"}else{"no"}
 #Import SQL PS commands
 Import-Module-SQLPS
 CLS
-Write-host "Tuning D365 environment. Please wait..." -foregroundcolor Cyan
+Write-host "Tuning local D365 environment. Please wait..." -foregroundcolor Cyan
 
 #Set the password for Administrator account to never expire
 write-host "Set the password to never expire for user Administrator and current user..." -foregroundcolor Yellow
@@ -47,7 +48,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 @("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {start-service -name "$_" }
 '@
 
-#Create Scheduletask and rearmscript under c:\D365scripts to check "rearm" Windows during logon
+#Create a Scheduletask and rearm script under c:\D365scripts to run "rearm check" during logon.
 $rearmscript = @'
 #Check rearmcount
 [string]$slmgrRearmcount = (cscript c:\windows\system32\slmgr.vbs /dlv | select-string -pattern "Remaining Windows rearm count")
@@ -83,6 +84,10 @@ $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
+
+#Download powershellscripts for packagedeploy and LCS download
+iwr "https://github.com/oysbre/D365tools/blob/main/DeployPackage.ps1" -outfile "c:\D365scripts\DeployPackage.ps1"
+iwr "https://github.com/oysbre/D365tools/blob/main/DownloadWithAzCopy.ps1" -outfile "c:\D365scripts\DownloadWithAzCopy.ps1"
 
 #Install d365tools and set WinDefender rules
 write-host "Installing Powershell module D365FO.tools and set WinDefender rules..." -foregroundcolor Yellow
