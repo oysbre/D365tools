@@ -7,6 +7,22 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 
+function InstallUpgrade-AzCopy {
+  $ErrorActionPreference = "SilentlyContinue"; #This will hide errors
+  If (-not(test-path "$env:systemroot\AzCopy.exe")) -or ((& azcopy -h | select-string -pattern "newer version").length -gt 0){
+    $ProgressPreference = 'SilentlyContinue'
+    Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    if (test-path $env:temp\AzCopy.zip){
+      Unblock-File $env:temp\AzCopy.zip
+      Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
+      Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "$env:systemroot\AzCopy.exe"
+      Remove-Item $env:temp\AzCopy.zip -force
+      Remove-Item $env:temp\AzCopy -force -Recurse
+    }#end if testpath
+  }#end if
+  $ErrorActionPreference = "Continue"; #Turning errors back on
+#End function InstallUpgrade-AzCopy
+
 function Import-Module-SQLPS {
      push-location
     import-module sqlps 3>&1 | out-null
@@ -70,6 +86,8 @@ function Set-RegistryValueForAllUsers {
     } 
 }#end function "Set-RegistryValueForAllUsers"
 
+InstallUpgrade-AzCopy
+
 #Herestrings for Powershellscripts
 $unsetcmd = @'
 #Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
@@ -112,6 +130,7 @@ if(get-module sqlps){"yes"}else{"no"}
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
 cls
+
 write-host "Running DEV optimizing script..." -ForegroundColor Yellow
 #add SQL service account to Perform volume maint task
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
@@ -119,8 +138,6 @@ $accountToAdd = $svr.serviceaccount
 
 if ($accountToAdd -ne $NULL){
 $sidstr = $null
-
-
 try {
        $ntprincipal = new-object System.Security.Principal.NTAccount "$accountToAdd"
        $sid = $ntprincipal.Translate([System.Security.Principal.SecurityIdentifier])
@@ -149,19 +166,17 @@ foreach($s in $c) {
        }
 }
 
-
 if( $currentSetting -notlike "*$($sidstr)*" ) {
        Write-Host "Modify Setting ""Perform Volume Maintenance Task""" -ForegroundColor Yellow
-       
+
        if( [string]::IsNullOrEmpty($currentSetting) ) {
              $currentSetting = "*$($sidstr)"
        } else {
              $currentSetting = "*$($sidstr),$($currentSetting)"
        }
        
-       Write-Host "$currentSetting"
-       
-       $outfile = @"
+  
+$outfile = @"
 [Unicode]
 Unicode=yes
 [Version]
@@ -170,15 +185,11 @@ Revision=1
 [Privilege Rights]
 SeManageVolumePrivilege = $($currentSetting)
 "@
-       
-       $tmp2 = ""
-       $tmp2 = [System.IO.Path]::GetTempFileName()
-       
-       
-       Write-Host "Import new settings to Local Security Policy" -ForegroundColor Yellow
-       $outfile | Set-Content -Path $tmp2 -Encoding Unicode -Force
-       #notepad.exe $tmp2
-       Push-Location (Split-Path $tmp2)
+$tmp2 = ""
+$tmp2 = [System.IO.Path]::GetTempFileName()
+Write-Host "Import new settings to Local Security Policy" -ForegroundColor Yellow
+$outfile | Set-Content -Path $tmp2 -Encoding Unicode -Force
+Push-Location (Split-Path $tmp2)
        
        try {
              secedit.exe /configure /db "secedit.sdb" /cfg "$($tmp2)" /areas USER_RIGHTS 
@@ -283,10 +294,8 @@ Else {
     )
 
     $packages = @(
-        
         "googlechrome"
         "notepadplusplus.install"
-        
     )
 
     # Install each program
@@ -323,31 +332,6 @@ catch {
   throw "Could not get MSI data: $InvokeWebRequestError"
 }
 #end install EDGE
-
-
-#Install/Update AzCopy to C:\windows
-if (!(test-path "C:\windows\AzCopy.exe")){
-remove-item "$env:temp\AzCopy.zip" -force -ea 0
-Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile "$env:temp\AzCopy.zip" -UseBasicParsing
-#Expand Archive
-unblock-file "$env:temp/AzCopy.zip"
-Expand-Archive "$env:temp/AzCopy.zip" "$env:temp/AzCopy" -Force
-#Move AzCopy to the destination you want to store it
-Get-ChildItem "$env:temp/AzCopy/*/azcopy.exe" | Move-Item -Destination "C:\windows\AzCopy.exe"
-remove-item "$env:temp/AzCopy.zip" -force -ea 0
-remove-item "$env:temp/AzCopy" -force -Recurse
-}
-else {
-$azcopyupdate = & azcopy -h | select-string -pattern "newer version"
-    if ($azcopyupdate){
-     Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
-    Unblock-File $env:temp\AzCopy.zip
-    Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
-    Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
-    remove-item $env:temp\AzCopy.zip -force
-    remove-item $env:temp\AzCopy -force -Recurse
-    }
-}#end AZcopy  
 
 #set timezone
 Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
