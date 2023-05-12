@@ -23,6 +23,7 @@ function InstallUpgrade-AzCopy {
   $ErrorActionPreference = "Continue"; #Turning errors back on
 #End function InstallUpgrade-AzCopy
 
+
 function Import-Module-SQLPS {
      push-location
     import-module sqlps 3>&1 | out-null
