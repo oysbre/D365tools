@@ -117,6 +117,7 @@ Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 #Install Nuget
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
+Write-host "Installing NuGet." -foregroundcolor yellow
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 Import-PackageProvider -Name NuGet 
@@ -133,7 +134,6 @@ if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
 cls
 
-write-host "Running DEV optimizing script..." -ForegroundColor Yellow
 #add SQL service account to Perform volume maint task
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
