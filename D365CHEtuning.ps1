@@ -86,7 +86,8 @@ function Set-RegistryValueForAllUsers {
         Write-Warning -Message $_.Exception.Message 
     } 
 }#end function "Set-RegistryValueForAllUsers"
-
+CLS
+Write-host "This script runs several optimizing settings for the CHE environment." -foregroundcolor Cyan
 InstallUpgrade-AzCopy
 
 #Herestrings for Powershellscripts
