@@ -1,6 +1,6 @@
 #This script automatically deploy packages on DEV. Requires Admin session
 #Put this script in the same folder where the deployablepackage is. Only one ZIP file per folder!
-#The process extracts the deployablepackage ZIP file to c:\pck\<deploypackagefolder> and deploys the package
+#The process renames and extracts the deployablepackage zipfile to c:\pck\<deploypackagefolder> and deploys the package
 #The script handles the ReportingService "bug" during deploy where it starts the service during DB sync.
 #It also checks that the "Azure Storage emulator" is up and running which is required for Retail step
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
@@ -28,16 +28,19 @@ $executionLogSuffix = "-executionLog"
 #EndRegion Parameters
 cls
 
-#install nuget minimum
+#install nuget minimum version
 if (!((Get-PackageProvider nuget).version -ge "2.8.5.201")){
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
+    write-host "Installing NuGet..." -foregroundcolor yellow
+    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
 }
 
 #install 7zip module for PowerShell
 if (!(get-installedmodule 7Zip4PowerShell -ea 0)){
+    write-host "Installing 7zip..." -foregroundcolor yellow
     Install-Module -Name 7Zip4PowerShell -Confirm:$False -Force
 }
-#Check Azure Storage Emulator status
+
+#Check Azure Storage Emulator version and running state
 $azsever =  & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -first 1
 if ($azsever -notmatch "5.10"){
     #install storage emulator if it's older than 5.10
@@ -51,19 +54,19 @@ if ($azsever -notmatch "5.10"){
 }
 $azsestatus= & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -skip 1 -first 1
 if ($azsestatus -match 'False'){ 
-write-host "Azure Storage Emulator must be running: " $azsestatus
-Get-Process "AzureStorageEmulator" -ea 0 | Stop-Process -force
-start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "clean" 
-start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "init -forceCreate" -PassThru
-start-sleep -s 15
-start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "start" -PassThru
-start-sleep -s 15
+    write-host "Azure Storage Emulator state: " $azsestatus
+    Get-Process "AzureStorageEmulator" -ea 0 | Stop-Process -force
+    start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "clean" 
+    start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "init -forceCreate" -PassThru
+    start-sleep -s 15
+    start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "start" -PassThru
+    start-sleep -s 15
 }
 $azsestatus= & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -skip 1 -first 1
 if ($azsestatus -match 'False'){
-write-host "Azure Storage Emulator is not running. Retail step 5x will probably fail. Either fix AzureStorageEmulator or skip step" -ForegroundColor red 
+    write-host "Azure Storage Emulator is not running. Retail step 5x will probably fail. Either fix AzureStorageEmulator or skip step" -ForegroundColor red 
 }
-else {write-host  "Azure Storage Emulator status: " $azsestatus }
+else {write-host  "Azure Storage Emulator state: " $azsestatus }
 
 #Check if VS and/or SSMS is running
 $vs = get-process devenv -ea 0;$ssms = get-process ssms -ea 0
@@ -77,7 +80,7 @@ $vskill = read-host "Visual Studio and/or SSMS is running. End process? (Y/N)"
     if ($vs){Wait-Process -InputObject $vs;}
     if ($ssms){Wait-Process -InputObject $ssms;}
     }
-}#end if processcheck
+}#end if VS/SSMS processcheck
     
 $sourceFile = get-childitem -path $sourceFolder -filter *.zip | sort lastwritetime | select -last 1
 $global:sourcePath = Join-Path $sourceFolder $sourceFile
@@ -93,7 +96,7 @@ $global:runbookPath = Join-Path $targetPath $runbookFile
 $global:topologyPath = Join-Path $targetPath $topologyFile
 $executionLogFile = $executionLogPrefix + $renamedsourceFile + $executionLogSuffix + $executionLogExtension
 $global:executionLogPath = Join-Path $targetBaseFolder $executionLogFile
-
+write-host ""
 Write-host "-----Variables-----" -ForegroundColor Magenta 
 $sourcePath
 $targetPath
@@ -208,7 +211,7 @@ Function ExecuteRunbook([int] $Step) {
     Remove-Job $jb
 }#end function ExecuteRunbook
 
-#Install upgrade
+#Deploy package process
 ExtractFiles
 Set7zipComp
 ExportServiceVersions -PlatformVersion $PlatformVersion -ExportSuffix "-before"
