@@ -32,19 +32,20 @@ function InstallUpgrade-AzCopy {
   $ErrorActionPreference = "SilentlyContinue"; #This will hide errors
   If ((-not(test-path "$env:systemroot\AzCopy.exe")) -or ((& azcopy -h | select-string -pattern "newer version").length -gt 0)){
     $ProgressPreference = 'SilentlyContinue'
+    Remove-Item $env:temp\AzCopy.zip -force -ea 0
     Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
     if (test-path $env:temp\AzCopy.zip){
       Unblock-File $env:temp\AzCopy.zip
       Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
       Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "$env:systemroot\AzCopy.exe"
-      Remove-Item $env:temp\AzCopy.zip -force
+      Remove-Item $env:temp\AzCopy.zip -force -ea 0
       Remove-Item $env:temp\AzCopy -force -Recurse
     }#end if testpath
  }#end if
   $ErrorActionPreference = "Continue"; #Turning errors back on
 }#End function InstallUpgrade-AzCopy
 
-if ((!(test-path $targetdir -ea 0)) -or ($targetdir -eq "<targetdir>")){
+if ((-not(test-path $targetdir -ea 0)) -or ($targetdir -eq "<targetdir>")){
     write-host "Set/check variable '$targetdir' and try again." -ForegroundColor red;pause;exit
 }
 
