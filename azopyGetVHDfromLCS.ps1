@@ -65,7 +65,7 @@ foreach ($url in $URLS){
     $statuscode = ""
     $statuscode= Get-UrlStatusCode -urlcheck $url
     if ($statuscode -eq 200){
-        write-host "Downloading VHD part $($i)..." -foregroundcolor Yellow
+        write-host "Downloading VHD part $($i) to $($targetpath). Please wait..." -foregroundcolor Yellow
         if ($i -eq 1){
             azcopy copy $url "$targetdir\$($D365VHDname)$i.exe"
             unblock-file "$targetdir\$($D365VHDname)$i.exe"
