@@ -1,5 +1,5 @@
 #Powershellscript to download VHD from LCS Shared library using AzCopy. Set/change targetdir variable if needed.
-#Requires Admin session.
+#Run as Admin powershellsession.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 
 #Force https over TLS12 protocol
