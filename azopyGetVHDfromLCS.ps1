@@ -65,7 +65,7 @@ foreach ($url in $URLS){
     $statuscode = ""
     $statuscode= Get-UrlStatusCode -urlcheck $url
     if ($statuscode -eq 200){
-        write-host "Downloading VHD part $($i) to $($targetpath). Please wait..." -foregroundcolor Yellow
+        write-host "Downloading VHD part $($i) to $($targetdir). Please wait..." -foregroundcolor Yellow
         if ($i -eq 1){
             azcopy copy $url "$targetdir\$($D365VHDname)$i.exe"
             unblock-file "$targetdir\$($D365VHDname)$i.exe"
@@ -75,7 +75,7 @@ foreach ($url in $URLS){
             unblock-file "$targetdir\$($D365VHDname)$i.rar" 
         }
     }#end if url check
-    else {write-host "Check the SAS link $($URL). Error : " $statuscode -foregroundcolor Red}
+    else {write-host "Check the SAS link $($URL). Error : " $statuscode -foregroundcolor Red;start-sleep -s 3}
 $i++ #iterate next number
 }#end foreach $url
 
@@ -83,4 +83,4 @@ $i++ #iterate next number
 if (test-path "$targetdir\$($D365VHDname)1.exe"){
     start-process "$targetdir\$($D365VHDname)1.exe"
 }
-else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow}
+else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow;start-sleep -s 4}
