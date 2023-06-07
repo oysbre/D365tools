@@ -30,7 +30,7 @@ $executionLogSuffix = "-executionLog"
 #EndRegion Parameters
 cls
 
-#install nuget minimum version
+#install NuGet minimum version
 if (-not((Get-PackageProvider nuget).version -ge "2.8.5.201")){
     write-host "Installing NuGet..." -foregroundcolor yellow
     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
