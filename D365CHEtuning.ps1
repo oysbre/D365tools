@@ -115,7 +115,6 @@ Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
 #Install Nuget
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
 Write-host "Installing NuGet." -foregroundcolor yellow
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
