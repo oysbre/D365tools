@@ -131,12 +131,14 @@ Function Set7zipComp {
         }#end if 7zipcompress
     }#end testpath
 }#end function Set7zipComp
+
 Function ExportServiceVersions($PlatformVersion, $ExportSuffix) {
     $exportFile = $exportPrefix + $PlatformVersion + $ExportSuffix + $ExportExtension
     $exportPath = Join-Path $targetBaseFolder $exportFile
     Write-Host "Exporting " $exportPath
     & $updateInstallerPath list > $exportPath
 }#End function ExportServiceVersions
+
 Function SetTopologyData {
     Write-Host "Updating " $topologyPath
     [xml]$xml = Get-Content $topologyPath
