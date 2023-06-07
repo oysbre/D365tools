@@ -1,8 +1,8 @@
-#This script automatically deploy packages on DEV. Requires Admin session
+#This script automatically deploy packages on a local DEV. Requires powershellsession with admin.
 #Put this script in the same folder where the deployablepackage is. Only one ZIP file per folder!
-#The process renames and extracts the deployablepackage zipfile to c:\pck\<deploypackagefolder> and deploys the package
+#The process renames and extracts the deployablepackage to c:\pck\<deploypackagefolder> and deploys the package.
 #The script handles the ReportingService "bug" during deploy where it starts the service during DB sync.
-#It also checks that the "Azure Storage emulator" is up and running which is required for Retail step
+#It also checks that the "Azure Storage emulator" is up and running which is required for Retail step.
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 
 #Region Parameters
@@ -29,32 +29,34 @@ $executionLogSuffix = "-executionLog"
 cls
 
 #install nuget minimum version
-if (!((Get-PackageProvider nuget).version -ge "2.8.5.201")){
+if (-not((Get-PackageProvider nuget).version -ge "2.8.5.201")){
     write-host "Installing NuGet..." -foregroundcolor yellow
     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$False
 }
 
 #install 7zip module for PowerShell
-if (!(get-installedmodule 7Zip4PowerShell -ea 0)){
+if (-not(get-installedmodule 7Zip4PowerShell -ea 0)){
     write-host "Installing 7zip..." -foregroundcolor yellow
     Install-Module -Name 7Zip4PowerShell -Confirm:$False -Force
 }
 
 #Check Azure Storage Emulator version and running state
-$azsever =  & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -first 1
-if ($azsever -notmatch "5.10"){
+$azSEver =  & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -first 1
+if ($azSEver -notmatch "5.10"){
     #install storage emulator if it's older than 5.10
     write-host "Installing Azure storage emulator 5.10..." -foregroundcolor yellow
+    remove-item "$env:temp\microsoftazurestorageemulator.msi" -force -ea 0
     (new-object System.Net.WebClient).DownloadFile('https://go.microsoft.com/fwlink/?linkid=717179&clcid=0x409', "$env:temp\microsoftazurestorageemulator.msi");
     if (test-path $env:temp\microsoftazurestorageemulator.msi){
         unblock-file $env:temp\microsoftazurestorageemulator.msi
         start-process  "$env:temp\microsoftazurestorageemulator.msi" -argumentlist "/quiet" -wait
-        remove-item "$env:temp\microsoftazurestorageemulator.msi" -force
-    }#end testpath Storageemulrator msifile
-}
-$azsestatus= & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -skip 1 -first 1
-if ($azsestatus -match 'False'){ 
-    write-host "Azure Storage Emulator state: " $azsestatus
+        remove-item "$env:temp\microsoftazurestorageemulator.msi" -force -ea 0
+    }#end testpath Storageemulator msifile
+}#end if ($azSEver -notmatch "5.10")
+
+$azSEstatus = & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status | select -skip 1 -first 1
+if ($azSEstatus -match 'False'){ 
+    write-host "Azure Storage Emulator state: " $azSEstatus
     Get-Process "AzureStorageEmulator" -ea 0 | Stop-Process -force
     start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "clean" 
     start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "init -forceCreate" -PassThru
@@ -62,8 +64,8 @@ if ($azsestatus -match 'False'){
     start-process "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" -argumentlist "start" -PassThru
     start-sleep -s 15
 }
-$azsestatus= & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status| select -skip 1 -first 1
-if ($azsestatus -match 'False'){
+$azSEstatus = & "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe" status | select -skip 1 -first 1
+if ($azSEstatus -match 'False'){
     write-host "Azure Storage Emulator is not running. Retail step 5x will probably fail. Either fix AzureStorageEmulator or skip step" -ForegroundColor red 
 }
 else {write-host  "Azure Storage Emulator state: " $azsestatus }
@@ -127,14 +129,12 @@ Function Set7zipComp {
         }#end if 7zipcompress
     }#end testpath
 }#end function Set7zipComp
-
 Function ExportServiceVersions($PlatformVersion, $ExportSuffix) {
     $exportFile = $exportPrefix + $PlatformVersion + $ExportSuffix + $ExportExtension
     $exportPath = Join-Path $targetBaseFolder $exportFile
     Write-Host "Exporting " $exportPath
     & $updateInstallerPath list > $exportPath
 }#End function ExportServiceVersions
-
 Function SetTopologyData {
     Write-Host "Updating " $topologyPath
     [xml]$xml = Get-Content $topologyPath
@@ -161,7 +161,6 @@ Function SetTopologyData {
 
 Function GenerateRunbook {
     Write-Host "Generating runbook " $runbookPath
-
     $serviceModelPath = Join-Path $targetPath "DefaultServiceModelData.xml"
     & $updateInstallerPath generate "-runbookId=$runbookId" "-topologyFile=$topologyPath" "-serviceModelFile=$serviceModelPath" "-runbookFile=$runbookPath"
 }#end function GenerateRunbook
@@ -173,7 +172,7 @@ Function ImportRunbook {
  
 Function ExecuteRunbook([int] $Step) {
     Write-Host "Executing runbook " $runbookPath
-    #Region Background process to handle bug for reporting service not being started by the upgrade script
+    #Region Background process to handle bug for reportingservice not being started by the upgrade script
     $jb = Start-Job -ScriptBlock { 
         while ($true) { 
             $logData = Get-Content -Path $args[0]
