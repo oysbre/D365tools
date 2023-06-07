@@ -2,7 +2,7 @@
 #Put this script in the same folder where the deployablepackage is. Only one ZIP file per folder!
 #The process extracts the deployablepackage to a shortened renamed folder ($targetBaseFolder\<deploypackagefolder>) to keep pathlength under 260 characters.
 #Then it starts the deploy.
-#The script handles the ReportingService "bug" during deploy where it starts the service during DB sync.
+#The script handles the ReportingService "bug" during deploy where it starts the service before DB sync.
 #It also checks that the "Azure Storage emulator" is up'n'running which is required for Retail step.
 
 #Run powershellsession as Admin.
