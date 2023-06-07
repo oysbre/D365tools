@@ -1,6 +1,7 @@
 #This script automatically deploy packages on a local DEV.
 #Put this script in the same folder where the deployablepackage is. Only one ZIP file per folder!
-#The process renames and extracts the deployablepackage to $targetBaseFolder\<deploypackagefolder> and deploys the package.
+#The process extracts the deployablepackage to a shortened renamed folder ($targetBaseFolder\<deploypackagefolder>) to keep pathlength under 260 characters.
+#Then it starts the deploy.
 #The script handles the ReportingService "bug" during deploy where it starts the service during DB sync.
 #It also checks that the "Azure Storage emulator" is up'n'running which is required for Retail step.
 
