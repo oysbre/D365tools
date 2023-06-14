@@ -362,7 +362,7 @@ write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 
 #Rename server due to DevOPS/VisualStudio "uniqueness"
 $newname = "<newname>"
-If (($env:computername -like "MININT*") -or ($env:computername -like "DVHD100*")){
+If (($env:computername -like "MININT*") -or ($env:computername -like "DV*")){
 If ($newname -eq "<newname>"){ $newname = read-host "New name not set. Set new:"}
 $sqlOldnamequery = @'
 SELECT @@SERVERNAME as servername
