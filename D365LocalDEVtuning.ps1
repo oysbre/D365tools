@@ -74,7 +74,7 @@ $rearmscript | out-file -filepath c:\D365scripts\rearm.ps1 -encoding utf8 -force
 [string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "C:\D365scripts\rearm.ps1"'
 $Action = New-ScheduledTaskAction -Execute '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe' -Argument $sch_args
 $Trigger = New-ScheduledTaskTrigger -atlogon
-$Trigger.Delay = 'PT1M'
+$Trigger.Delay = 'PT30S'
 $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'Auto Rearm' -InputObject $Task -User "System"
