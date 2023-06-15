@@ -79,6 +79,38 @@ $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'Auto Rearm' -InputObject $Task -User "System"
 
+#set AppPool settings for AOSService
+Import-Module WebAdministration
+$AppPool = Get-Item IIS:\AppPools\AOSSERVICE
+if ($AppPool){
+#disable timeout
+Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name processModel.idleTimeout -value ( [TimeSpan]::FromMinutes(0))
+#disable the regular time of 1740 minutes
+Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.time -Value "00:00:00"
+#Clear any scheduled restart times
+Clear-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.schedule
+#set to alwaysrunning
+Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name startMode -Value "AlwaysRunning"
+}
+
+
+#create a Scheduletask and warmupscript under c:\D365scripts to run "Warmupscript" after startup
+$warmupscript = @'
+#Warmup D365 env
+Invoke-WebRequest -Uri (get-d365url).url -UseDefaultCredentials
+'@
+if (-not(test-path "c:\D365scripts")){new-item -ItemType directory -Path "c:\D365scripts"}
+Unregister-ScheduledTask -TaskName 'WarmupD365' -Confirm:$false -ea 0
+remove-item "c:\D365scripts\WarmupD365.ps1" -force -ea 0
+$warmupscript | out-file -filepath c:\D365scripts\WarmupD365.ps1 -encoding utf8 -force -Width 2147483647
+[string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "c:\D365scripts\WarmupD365.ps1"'
+$Action = New-ScheduledTaskAction -Execute '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe' -Argument $sch_args
+$Trigger = New-ScheduledTaskTrigger -atstartup
+$Trigger.Delay = 'PT1M' #delay for 1 minute after startup
+$Settings = New-ScheduledTaskSettingsSet
+$Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
+Register-ScheduledTask -TaskName 'WarmupD365' -InputObject $Task -User "System"
+
 #Create powershellscripts on Desktop to start/stop services used before DB sync
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
