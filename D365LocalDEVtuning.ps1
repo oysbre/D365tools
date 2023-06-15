@@ -71,7 +71,7 @@ if (-not(test-path "c:\D365scripts")){new-item -ItemType directory -Path "c:\D36
 Unregister-ScheduledTask -TaskName 'Auto Rearm' -Confirm:$false -ea 0
 remove-item "c:\D365scripts\rearm.ps1" -force -ea 0
 $rearmscript | out-file -filepath c:\D365scripts\rearm.ps1 -encoding utf8 -force -Width 2147483647
-[string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "C:\knowit\rearm.ps1"'
+[string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "C:\D365scripts\rearm.ps1"'
 $Action = New-ScheduledTaskAction -Execute '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe' -Argument $sch_args
 $Trigger = New-ScheduledTaskTrigger -atlogon
 $Trigger.Delay = 'PT1M'
