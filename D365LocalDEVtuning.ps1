@@ -106,7 +106,7 @@ $warmupscript | out-file -filepath c:\D365scripts\WarmupD365.ps1 -encoding utf8 
 [string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "c:\D365scripts\WarmupD365.ps1"'
 $Action = New-ScheduledTaskAction -Execute '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe' -Argument $sch_args
 $Trigger = New-ScheduledTaskTrigger -atstartup
-$Trigger.Delay = 'PT1M' #delay for 1 minute after startup
+$Trigger.Delay = 'PT30S' #delay for 30 sec after startup
 $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'WarmupD365' -InputObject $Task -User "System"
