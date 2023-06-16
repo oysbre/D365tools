@@ -79,9 +79,37 @@ $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'Auto Rearm' -InputObject $Task -User "System"
 
-#set AppPool settings for AOSService
+#Set AppPool settings for AOSERVICE
 Import-Module WebAdministration
-$AppPool = Get-Item IIS:\AppPools\AOSSERVICE
+$siteName = "AOSSERVICE"
+
+#Enable IIS Application Initialization
+$webAppInit = Get-WindowsFeature -Name "Web-AppInit"
+if(!$webAppInit.Installed) 
+{
+    Write-Host "$($webAppInit.DisplayName) not present, installing"
+    Install-WindowsFeature $webAppInit -ErrorAction Stop
+    Write-Host "`nInstalled $($webAppInit.DisplayName)`n" -ForegroundColor Green
+}
+else 
+{
+    Write-Host "$($webAppInit.DisplayName) was already installed" -ForegroundColor Yellow
+}
+
+#Fetch the site
+$site = Get-Website -Name $siteName
+
+
+if(!$site)
+{
+    Write-Host "Site $siteName could not be found, continueing with the rest of the script!" -ForegroundColor Red
+    
+}
+#got the site!
+else { 
+#Fetch the application pool
+$appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
+
 if ($AppPool){
 #disable timeout
 Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name processModel.idleTimeout -value ( [TimeSpan]::FromMinutes(0))
@@ -89,10 +117,24 @@ Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name processModel.idleTimeout -va
 Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.time -Value "00:00:00"
 #Clear any scheduled restart times
 Clear-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.schedule
-#set to alwaysrunning
-Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name startMode -Value "AlwaysRunning"
-}
 
+#Set up AlwaysRunning
+if($appPool.startMode -ne "AlwaysRunning")
+{
+    Write-Host "startMode is set to $($appPool.startMode ), activating AlwaysRunning"
+    $appPool | Set-ItemProperty -name "startMode" -Value "AlwaysRunning"
+    $appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
+    Write-Host "startMode is now set to $($appPool.startMode)`n" -ForegroundColor Green
+}#end if AlwaysRunning
+
+if(!(Get-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled).Value) 
+{
+    Write-Host "preloadEnabled is inactive, activating"
+    Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled -Value True
+    Write-Host "preloadEnabled is now set to $((Get-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled).Value)" -ForegroundColor Green
+}#end if reload check
+}#end if $appPool
+}#end else $site
 
 #create a Scheduletask and warmupscript under c:\D365scripts to run "Warmupscript" after startup
 $warmupscript = @'
