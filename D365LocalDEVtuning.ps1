@@ -453,6 +453,10 @@ Set-MpPreference -DisableRealtimeMonitoring $true
 #Disable UAC
 Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System -Name EnableLUA -Value 0
 
+#Disable http2
+Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\HTTP\Parameters -Name EnableHttp2Tls -Value 0
+Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\HTTP\Parameters -Name EnableHttp2Cleartext -Value 0
+
 #Set powerplan to HIGH PERFORMANCE
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
