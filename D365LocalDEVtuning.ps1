@@ -437,7 +437,7 @@ write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 #Rename server due to DevOPS/VisualStudio "uniqueness"
 $newname = "<newname>"
 If (($env:computername -like "MININT*") -or ($env:computername -like "DV*")){
-If ($newname -eq "<newname>"){write-host "New name for DEVserver not set. Set new:" -foregroundcolor cyan; $newname = read-host }
+If ($newname -eq "<newname>"){write-host "New name for DEVserver not set. Set new:" -foregroundcolor cyan; $newname = read-host;$newname=$newname.trim() }
 $sqlOldnamequery = @'
 SELECT @@SERVERNAME as servername
 '@
@@ -469,7 +469,6 @@ If (Test-Path -Path "$env:ProgramData\Chocolatey") {
 Else {
 
     Write-Host "Installing Chocolatey"
-
     Set-ExecutionPolicy Bypass -Scope Process -Force; 
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
@@ -493,6 +492,7 @@ Else {
         
         "googlechrome"
         "notepadplusplus.install"
+	"microsoft-edge"
         
     )
 
