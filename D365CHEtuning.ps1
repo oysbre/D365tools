@@ -171,8 +171,6 @@ if(!$site)
 
 #Fetch the application pool
 $appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
-
-
 #Set up AlwaysRunning
 if($appPool.startMode -ne "AlwaysRunning")
 {
@@ -209,6 +207,12 @@ Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-module -name PowerShellGet) -eq $null){
 Install-Module -Name PowerShellGet -Force
 }
+
+#Install D365fo.tools
+write-host "Installing Powershell module d365fo.tools and setting WinDefender rules" -ForegroundColor yellow
+Install-Module -Name "d365fo.tools"
+Add-D365WindowsDefenderRules
+write-host "Installed Powershell module d365fo.tools" -ForegroundColor Green
 
 #Load SQL module
 if(get-module sqlps){"yes"}else{"no"}
@@ -260,8 +264,7 @@ if( $currentSetting -notlike "*$($sidstr)*" ) {
        } else {
              $currentSetting = "*$($sidstr),$($currentSetting)"
        }
-       
-  
+        
 $outfile = @"
 [Unicode]
 Unicode=yes
@@ -331,11 +334,6 @@ Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([
 Write-host "Set Powercfg til High Performance" -foregroundcolor yellow
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
-write-host "Installing Powershell module d365fo.tools and setting WinDefender rules" -ForegroundColor yellow
-Install-Module -Name "d365fo.tools"
-Add-D365WindowsDefenderRules
-write-host "Installed Powershell module d365fo.tools" -ForegroundColor Green
-
 #Use IIS instead of IIS Express
 Write-host "Use IIS instead of IIS Express" -foregroundcolor yellow
 if (test-path "$env:servicedrive\AOSService\PackagesLocalDirectory\bin\DynamicsDevConfig.xml"){
@@ -382,6 +380,8 @@ Else {
     $packages = @(
         "googlechrome"
         "notepadplusplus.install"
+	"microsoft-edge"
+ 	"sql-server-management-studio"
     )
 
     # Install each program
@@ -391,33 +391,7 @@ Else {
         & $chocoExePath "install" $packageToInstall "-y" "-r"
     }
 }
-#end install packages
-
-
-#install EDGE
-try {
-    #Try to get JSON data from Microsoft
-    $response = Invoke-WebRequest -Uri 'https://edgeupdates.microsoft.com/api/products?view=enterprise' -Method Get -ContentType "application/json" -UseBasicParsing -ErrorVariable InvokeWebRequestError
-    $jsonObj = ConvertFrom-Json $([String]::new($response.Content))
-    $selectedIndex = [array]::indexof($jsonObj.Product, "Stable")
-    $selectedrelease = ($jsonObj[$selectedIndex]).Releases| Where-Object { $_.Architecture -eq "x64" -and $_.Platform -eq "Windows"}| Sort-Object -Descending | select -first 1
-    $selectedlocation = $selectedrelease | select -expandproperty artifacts | select -expandproperty location
-    if ((Get-ItemProperty -path 'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge' -ea 0) -eq $null) {
-    remove-item "$env:temp\MicrosoftEdgeEnterpriseX64.msi" -ea 0
-        try {            
-            Invoke-WebRequest -Uri $selectedlocation -OutFile "$env:temp\MicrosoftEdgeEnterpriseX64.msi" -UseBasicParsing
-            Start-Process "$env:temp\MicrosoftEdgeEnterpriseX64.msi" -ArgumentList "/quiet /passive" -wait
-            }
-        catch {
-          throw "Attempted to download file, but failed: $error[0]"
-        }   
-    }#end if installcheck
-    
-}#end try
-catch {
-  throw "Could not get MSI data: $InvokeWebRequestError"
-}
-#end install EDGE
+#end install choco packages
 
 #set timezone
 Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
