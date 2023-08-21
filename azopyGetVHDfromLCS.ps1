@@ -11,7 +11,7 @@ $D365VHDname = "D365VHD-10_0_32_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
 #Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
-#Place SAS URLs in right order in variable $URLS starting from part file nr 1.
+#Place SAS URLs in right order in variable $URLS starting from part file nr 1. This is important since first file is an EXE (WinRAR Executable)
 #Save the script and run it!
 $URLS = @(
 <#1#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/5e514086-fe66-4f43-9bb4-b098fc096c0d/AX7ProductName-12-e73dbcb9-0b37-4fc0-9dd2-3696b518e66a?sv=2018-03-28&sr=b&sig=Yv97NE2HkAQ5hifrd2dkpISPaScJyUubf3t%2Bz7ab2WE%3D&se=2023-03-30T07%3A56%3A05Z&sp=r" 
@@ -48,6 +48,8 @@ function InstallUpgrade-AzCopy {
 if ((-not(test-path $targetdir -ea 0)) -or ($targetdir -eq "<targetdir>")){
     write-host "Set/check variable '$targetdir' and try again." -ForegroundColor red;pause;exit
 }
+#Install/update AzCopy
+InstallUpgrade-AzCopy  
 
 #Check available diskspace for compressed VHD imagefiles 
 $diskspace =  [math]::Round((Get-WmiObject -Class Win32_LogicalDisk  | ? {$_. DriveType -eq 3} | ? {$_.DeviceID -like $targetdir.substring(0,2)}|select FreeSpace).freespace/1GB,0)
@@ -56,9 +58,6 @@ if ($diskspace -lt 32){
     pause;
     exit
 }
-
-#Install/update AzCopy
-InstallUpgrade-AzCopy  
 
 #Download files
 $i = 1
