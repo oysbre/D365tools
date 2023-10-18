@@ -394,7 +394,7 @@ Else {
 #end install choco packages
 #install VisualC redist
 iwr "https://aka.ms/vs/17/release/VC_redist.x64.exe" -OutFile $env:temp\VC_redist.x64.exe -UseBasicParsing
-start-process $env:temp\VC_redist.x64.exe -wait
+start-process $env:temp\VC_redist.x64.exe -argumentlist "/q /norestart" -wait
 
 #set timezone
 Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
