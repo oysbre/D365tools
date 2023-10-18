@@ -1,11 +1,15 @@
 # D365tools
 'D365CHEtuning.ps1' is used post-creation of CloudHosted D365 DEV servers to tune the performance and add some tools.<br>
 - Installs EDGE if needed, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
+- Installs Visual C redist needed for 10.0.36 and up
+- Add powershellscripts to Start and Stop D365 dependent services
 - Set the Windows account passwordpolicy to never expire.
 - Sets WinDefender rules that excludes D365 processes and files.
 - Sets Powerplan to "High performance."
 - Grant the SQL serviceaccount "Perform Volume Maintenance Task" rights to speedup restore/expanding datadisk.
 - Enables Traceflag 7412 in SQL instance to see live execution plans i SSMS.
+- Set timezone to CET
+- Use IIS instead of IIS Express
 - Show computericon on Desktop with servername.
 
 'D365LocalDEVtuning.ps1' is used post-creation of Local D365 DEV environment to tune performance and rename the server.
