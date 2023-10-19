@@ -120,7 +120,8 @@ $warmupscript = @'
 Invoke-WebRequest -Uri (get-d365url).url -UseDefaultCredentials
 '@
 if (-not(test-path "c:\D365scripts")){new-item -ItemType directory -Path "c:\D365scripts"}
-Unregister-ScheduledTask -TaskName 'WarmupD365' -Confirm:$false -ea 0
+if (-not(test-path c:\D365scripts\WarmupD365.ps1)){
+Unregister-ScheduledTask -TaskName 'WarmupD365' -ea 0
 remove-item "c:\D365scripts\WarmupD365.ps1" -force -ea 0
 $warmupscript | out-file -filepath c:\D365scripts\WarmupD365.ps1 -encoding utf8 -force -Width 2147483647
 [string]$sch_args = '-executionpolicy bypass -NonInteractive -NoLogo -NoProfile -File "c:\D365scripts\WarmupD365.ps1"'
@@ -130,7 +131,7 @@ $Trigger.Delay = 'PT30S' #delay for 30 sec after startup
 $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'WarmupD365' -InputObject $Task -User "System"
-
+}
 
 #Set AppPool settings for AOSERVICE
 Import-Module WebAdministration
