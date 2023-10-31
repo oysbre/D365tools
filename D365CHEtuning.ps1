@@ -313,7 +313,7 @@ GO
 Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
 Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }#end if $sysmeminMB
-
+<#
 #Install VS menu extension
 $vsixmenuurl = "https://evgeny.gallerycdn.vsassets.io/extensions/evgeny/restoreextensions/1.0.2/1556184103349/RestoreExtensions-v1.0.2.vsix"
 Invoke-WebRequest -Uri "$vsixmenuurl" -OutFile "$env:temp\RestoreExtensions-v1.0.2.vsix" -UseBasicParsing
@@ -325,6 +325,7 @@ $vsixinstaller = Get-ChildItem -Path  "${Env:ProgramFiles(x86)}\Microsoft Visual
 $vsargs = "/q $env:temp/RestoreExtensions-v1.0.2.vsix"
 start-process $vsixinstaller -argumentlist $vsargs -wait
 }
+#>
 
 #Set the password to never expire
 Write-host "Set account password to never expire" -foregroundcolor yellow
