@@ -345,6 +345,7 @@ write-host 'Setting RuntimeHostType to "IIS" in DynamicsDevConfig.xml' -Foregrou
 $xmlDoc.DynamicsDevConfig.RuntimeHostType = "IIS"
 $xmlDoc.Save("$env:servicedrive\AOSService\PackagesLocalDirectory\bin\DynamicsDevConfig.xml")
 write-host 'RuntimeHostType set "IIS" in DynamicsDevConfig.xml' -ForegroundColor Green
+& iisreset
 }#end if IIS check
 }#end if test-path xml file
 else {write-host 'AOSService drive not found! Could not set RuntimeHostType to "IIS"' -ForegroundColor red}
