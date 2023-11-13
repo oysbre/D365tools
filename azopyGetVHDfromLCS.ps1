@@ -7,7 +7,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 #Set target downloadpath. Default c:\temp
 $targetdir = "C:\temp"
-$D365VHDname = "D365VHD-10_0_32_part"
+$D365VHDname = "D365VHD-10_0_37_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
 #Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
