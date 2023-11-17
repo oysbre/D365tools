@@ -116,28 +116,22 @@ Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
 # MS Visual C++ 2022 redist
 $DownloadPath = "$env:temp"
-$FilesToDownload = @(
-'https://aka.ms/vs/17/release/VC_redist.x64.exe'
-)
-
-$FilesToDownload  |
-ForEach{
-    $webclient = New-Object System.Net.WebClient
-    $url       = $PSItem
-    $filename  = [System.IO.Path]::GetFileName($url)
-    $file      = "$DownloadPath\$filename"
-    $webclient.DownloadFile($url, $file)
+$vcurl = 'https://aka.ms/vs/17/release/VC_redist.x64.exe'
+$webclient = New-Object System.Net.WebClient
+$vcfilename  = [System.IO.Path]::GetFileName($vcurl)
+$vcfile      = "$DownloadPath\$vcfilename"
+$webclient.DownloadFile($vcurl, $vcfile)
     
-}
-if (test-path $file){
-$vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($file).FileVersion
+
+if (test-path $vcfile){
+$vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
 $vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
     
     if (($vcdlver -notmatch $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
        write-host "Installing MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
-       $vcargs = "/q /norestart"
-        Start-Process $file -Wait -ArgumentList $vcargs
-        remove-item $file -force
+       $vcargs = "/p /norestart"
+        Start-Process $vcfile -Wait -ArgumentList $vcargs
+        remove-item $vcfile -force
     }#end if ver check
 
 }#end if VcDlfile check
