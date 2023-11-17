@@ -114,6 +114,9 @@ Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
+#Download powershellscripts for LCS download
+iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "$DesktopPath\DownloadWithAzCopy.ps1"
+
 # MS Visual C++ 2022 redist
 $DownloadPath = "$env:temp"
 $vcurl = 'https://aka.ms/vs/17/release/VC_redist.x64.exe'
