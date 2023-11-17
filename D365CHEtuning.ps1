@@ -389,6 +389,7 @@ Else {
         "notepadplusplus.install"
 	"microsoft-edge"
  	"sql-server-management-studio"
+  	"7zip.install"
     )
 
     # Install each program
