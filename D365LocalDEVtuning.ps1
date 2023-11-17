@@ -493,6 +493,7 @@ Else {
         "googlechrome"
         "notepadplusplus.install"
 	"microsoft-edge"
+ 	"7zip.install"
         
     )
 
