@@ -1,4 +1,4 @@
-#Script to download "large" files f x from LCS to local diskdrive using AzCopy
+#Script to download "large" files from LCS to local diskdrive using AzCopy
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 #Force https over TLS12 protocol
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -13,6 +13,7 @@ function Get-UrlStatusCode([string] $Urlcheck) {
     catch [Net.WebException]  { [int]$_.Exception.Response.StatusCode  }
 }#end function URL test
 
+if ($URL -eq "<paste URL here>"){write-host "Set SAS URL generated in LCS in variable '$URL'" -foregroundcolor yellow;pause;exit}
 if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: c:\temp\SU10028.zip in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
 
 #Install/update AzCopy
