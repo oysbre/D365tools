@@ -83,7 +83,6 @@ function Set-RegistryValueForAllUsers {
 }#end function "Set-RegistryValueForAllUsers"
 CLS
 Write-host "This script runs several optimizing settings for the CHE environment." -foregroundcolor Cyan
-InstallUpgrade-AzCopy
 
 #Herestrings for Powershellscripts
 $unsetcmd = @'
@@ -105,7 +104,6 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 #Create powershellscripts on Desktop to start/stop services used before DB sync
 Write-host "Creating powershellscripts on Desktop to start/stop services used before DB sync" -foregroundcolor yellow
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
-Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
@@ -344,8 +342,7 @@ Else {
     Write-Host "Installing Chocolatey"
 
     Set-ExecutionPolicy Bypass -Scope Process -Force; 
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; 
-    
+      
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     #Determine choco executable location
