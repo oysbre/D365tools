@@ -1,3 +1,5 @@
+#Use E/D8v5 vmsize and 15x32GB HDDs for the new VM config
+
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
@@ -7,22 +9,15 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 
-function InstallUpgrade-AzCopy {
-  $ErrorActionPreference = "SilentlyContinue"; #This will hide errors
-  If ((-not(test-path "$env:systemroot\AzCopy.exe")) -or ((& azcopy -h | select-string -pattern "newer version").length -gt 0)){
-    $ProgressPreference = 'SilentlyContinue'
-    Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
-    if (test-path $env:temp\AzCopy.zip){
-      Unblock-File $env:temp\AzCopy.zip
-      Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
-      Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "$env:systemroot\AzCopy.exe"
-      Remove-Item $env:temp\AzCopy.zip -force
-      Remove-Item $env:temp\AzCopy -force -Recurse
-    }#end if testpath
- }#end if
-  $ErrorActionPreference = "Continue"; #Turning errors back on
-}#End function InstallUpgrade-AzCopy
 
+Set-MpPreference -DisableRealtimeMonitoring $true 
+ #region Install tools
+Install-Module -Name SqlServer -AllowClobber
+Install-Module -Name d365fo.tools -AllowClobber
+Add-D365WindowsDefenderRules
+Invoke-D365InstallAzCopy
+Invoke-D365InstallSqlPackage
+#endregion
 
 function Import-Module-SQLPS {
      push-location
@@ -216,11 +211,6 @@ if ((get-module -name PowerShellGet) -eq $null){
 Install-Module -Name PowerShellGet -Force
 }
 
-#Install D365fo.tools
-write-host "Installing Powershell module d365fo.tools and setting WinDefender rules" -ForegroundColor yellow
-Install-Module -Name "d365fo.tools"
-Add-D365WindowsDefenderRules
-write-host "Installed Powershell module d365fo.tools" -ForegroundColor Green
 
 #Load SQL module
 if(get-module sqlps){"yes"}else{"no"}
@@ -320,19 +310,6 @@ GO
 Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
 Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }#end if $sysmeminMB
-<#
-#Install VS menu extension
-$vsixmenuurl = "https://evgeny.gallerycdn.vsassets.io/extensions/evgeny/restoreextensions/1.0.2/1556184103349/RestoreExtensions-v1.0.2.vsix"
-Invoke-WebRequest -Uri "$vsixmenuurl" -OutFile "$env:temp\RestoreExtensions-v1.0.2.vsix" -UseBasicParsing
-#Expand Archive
-if (test-path "$env:temp/RestoreExtensions-v1.0.2.vsix"){
-unblock-file "$env:temp/RestoreExtensions-v1.0.2.vsix"
-write-host "Installing VS menuextension" -foregroundcolor yellow
-$vsixinstaller = Get-ChildItem -Path  "${Env:ProgramFiles(x86)}\Microsoft Visual Studio" -recurse | Where-Object {$_.name -eq "vsixinstaller.exe"} | Sort-Object LastWriteTime -Descending | Select-Object -exp fullname -First 1
-$vsargs = "/q $env:temp/RestoreExtensions-v1.0.2.vsix"
-start-process $vsixinstaller -argumentlist $vsargs -wait
-}
-#>
 
 #Set the password to never expire
 Write-host "Set account password to never expire" -foregroundcolor yellow
@@ -403,9 +380,11 @@ Else {
     }
 }
 #end install choco packages
-#install VisualC redist
-iwr "https://aka.ms/vs/17/release/VC_redist.x64.exe" -OutFile $env:temp\VC_redist.x64.exe -UseBasicParsing
-start-process $env:temp\VC_redist.x64.exe -argumentlist "/q /norestart" -wait
+
+Write-Host "Setting Management Reporter to manual startup to reduce churn and Event Log messages"
+Get-D365Environment -FinancialReporter | Set-Service -StartupType Manual
+Stop-Service -Name MR2012ProcessService -Force
+Set-Service -Name MR2012ProcessService -StartupType Disabled
 
 #set timezone
 Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
