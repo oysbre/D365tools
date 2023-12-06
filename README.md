@@ -2,8 +2,9 @@
 'D365CHEtuning.ps1' is used post-creation of CloudHosted D365 DEV servers to tune the performance and add some tools.<br> Open Powershell and copy paste command to download script to Desktop<br>
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1" <br><br>
 - Installs EDGE if needed, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
-- Installs Visual C redist needed for 10.0.36 and up
-- Add powershellscripts to Start and Stop D365 dependent services
+- Installs/update Visual C redist needed for 10.0.36 and up
+- Puts the powershellscript "DownloadWithAzCopy.ps1" on Desktop to download files from LCS fast
+- Add powershellscripts to Start & Stop D365 dependent services
 - Set the Windows account passwordpolicy to never expire.
 - Sets WinDefender rules that excludes D365 processes and files.
 - Sets Powerplan to "High performance."
