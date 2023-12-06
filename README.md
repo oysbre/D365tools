@@ -9,7 +9,7 @@ iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -o
 - Sets WinDefender rules that excludes D365 processes and files.
 - Sets Powerplan to "High performance."
 - Grant the SQL serviceaccount "Perform Volume Maintenance Task" rights to speedup restore/expanding datadisk.
-- Enables Traceflag 7412 in SQL instance to see live execution plans i SSMS.
+- Enables Traceflag 7412 in SQL instance to see live execution plans in SSMS.
 - Set timezone to CET
 - Use IIS instead of IIS Express
 - Show computericon on Desktop with servername.
