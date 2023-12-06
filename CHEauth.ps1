@@ -4,8 +4,10 @@
   https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/dev-tools/secure-developer-vm#set-up-a-new-application-and-certificate-registration
 
   .DESCRIPTION
-  The CHEauth.ps1 script generates a selfsigned certificate, installs it to certstore "LocalMachine", grants NetworkService READ permission to it and exports the certificate for Azure application ID to Desktop and updates the web.config with application ID together with thumbprint of certificate.
+  The CHEauth.ps1 script generates a selfsigned certificate, installs it to certstore "LocalMachine", grants NetworkService READ permission to it and exports the certificate for Azure application ID to Desktop
+  and updates the web.config with application ID together with thumbprint of certificate.
   Create an Azure application with API permissions: Dynamics ERP – This permission is required to access finance and operations environments, Microsoft Graph (User.Read.All and Group.Read.All permissions of the Application type)
+  Add Env FO URL to RedirectURI in Authentication in the Azure Application.
   
   .PARAMETER appID
   Specifies the Azure application ID. This is hardcoded and not checked in Microsoft Entra!
@@ -22,8 +24,8 @@
   A certificate to Desktop of the current user that must be uploaded to the Application ID
 
   .EXAMPLE
-  PS> .\CHEauth.ps1 -appid 3485734867345786736
-  Creates a selfsigned certificate
+  PS> .\CHEauth.ps1
+  Creates a selfsigned certificate named "CHEAuth" and expires after 2 years. It will ask for appID.
 
   .EXAMPLE
   PS> .\CHEauth.ps1 -appid 3485734867345786736 -certname "Selfsignedcert"
@@ -33,15 +35,13 @@
   PS> .\CHEauth.ps1 -appid 3485734867345786736 -certname "Selfsignedcert" -certexpire 1
   Creates a selfsigned certificate with name "Selfsignedcert" that expires after 1 year
 #>
-
-#Create and Install cert in Localmachine certstore
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
 $arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break
 }
 
-
+#Create and Install cert in Localmachine certstore
  param (
         [Parameter(Mandatory=$true)][string]$appID,
         [Parameter(Mandatory = $true)]${certName[CHEauth]},
@@ -56,15 +56,12 @@ $arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$ps
         2
     }
 
-#Region variables
-#Cert
-$certFilepath = "$env:USERPROFILE\Desktop" ## Specify your preferred location
+#----Region variables----
+$certFilepath = "$env:USERPROFILE\Desktop" ## Specify your preferred location. Desktop is default.
 $certStorelocation = "Cert:\LocalMachine\My"
+#----End Region variables----
 
-
-#End Region variables
-# BEGIN
-
+#BEGIN
 CLS
 write-host "Using variables: " -ForegroundColor CYAN
 write-host '$certName: ' $($certName) -ForegroundColor Magenta
@@ -84,14 +81,14 @@ write-host "Microsoft Graph (User.Read.All and Group.Read.All permissions of the
 pause;exit
 }
 
-#Check for existsting certs
-$existingcert = Get-ChildItem -Path $certStorelocation -ea 0 | Where-Object {$_.Subject -Match "$certname"}# | Select-Object Thumbprint, FriendlyName
+#Check for existsting cert
+$existingcert = Get-ChildItem -Path $certStorelocation -ea 0 | Where-Object {$_.Subject -Match "$certname"} # | Select-Object Thumbprint, FriendlyName
 if ($existingcert){
 write-host "A certificate with name $($certName) already exists in $($certStorelocation) with expiredate $($existingcert.notafter). Delete and re-create? " -ForegroundColor yellow;$certDel = read-host
     if ($certDel -eq 'y'){
         $existingcert| Remove-Item
     }
-    else {write-host "Existing cert found in certstore. Exiting.";pause;exit }
+    else {write-host "Existing cert found in certstore. Cannot continue. Exiting.";pause;exit }
 }#end if check existing cert
 
 if (test-path "$certFilepath\$certname.cer"){
@@ -99,13 +96,12 @@ if (test-path "$certFilepath\$certname.cer"){
     if ($certDelFile -eq 'y'){
         remove-item  "$certFilepath\$certname.cer" -force
     }
-    else {write-host "Existing certfile found. Exiting.";pause;exit }
-}#end if certfile
+    else {write-host "Existing certfile found. Cannot continue. Exiting.";pause;exit }
+}#end if check existing certfile
 
 #Create cert
-Write-host "Create, install and export cert $($certName) for Azure application ID $($appid) auth?" -ForegroundColor CYAN ;$certAns = read-host
+Write-host "Create, install and export cert $($certName) for Azure application ID $($appid) ?" -ForegroundColor CYAN ;$certAns = read-host
 if ($certAns -eq "y"){
-    
     write-host "Creating selfsigned cert $($certname) with $($certExpire) years expiration date..." -foregroundcolor yellow
     $cert = New-SelfSignedCertificate -Subject "CN=$certname" -CertStoreLocation $certStorelocation -KeyExportPolicy Exportable -KeySpec Signature -KeyLength 2048 -KeyAlgorithm RSA -HashAlgorithm SHA256 -NotAfter (get-date).AddYears($certExpire)
     write-host "Exporting cert $($certname)" -foregroundcolor yellow
@@ -130,7 +126,7 @@ if ($certAns -eq "y"){
         throw "Unable to get the privatekey container to set permissions."
     }
 
-    #Grant Network Service account access to cert
+    #Grant NetworkService account access to cert
     $networkServiceSID = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::NetworkServiceSid, $null)
     $permissions = (Get-Item $keyFullPath).GetAccessControl()
     $newruleset = 0
@@ -187,7 +183,7 @@ if ($certAns -eq "y"){
 }#end if $certAns
 else {write-host "Skipped creating cert." -ForegroundColor green}
 
-start-sleep -s 5
+start-sleep -s 20
 
 
 
