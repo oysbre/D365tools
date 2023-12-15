@@ -132,17 +132,17 @@ if ($certAns -eq "y"){
     $newruleset = 0
     $identnetwork = $permissions.access | where-object {$_.identityreference -eq "$($networkServiceSID.Translate([System.Security.Principal.NTAccount]).value)"} | select
     if($identnetwork.IdentityReference -ne "$($networkServiceSID.Translate([System.Security.Principal.NTAccount]).value)"){
-        $rule1 = new-object security.accesscontrol.filesystemaccessrule($networkServiceSID, 'FullControl', 'None', 'None', 'Allow')
+        $rule1 = new-object security.accesscontrol.filesystemaccessrule($networkServiceSID, 'Read', 'None', 'None', 'Allow')
         $permissions.AddAccessRule($rule1)
         $newruleset = 1
-        write-host "Added NetworkService with FULLCONTROL access to cert" -ForegroundColor Yellow
+        write-host "Added NetworkService with READ access to cert" -ForegroundColor Yellow
     }
     else {
     if ($identnetwork.FileSystemRights -ne 'FullControl'){
-        $rule1 = new-object security.accesscontrol.filesystemaccessrule($networkServiceSID, 'FullControl', 'None', 'None', 'Allow')
+        $rule1 = new-object security.accesscontrol.filesystemaccessrule($networkServiceSID, 'Read', 'None', 'None', 'Allow')
         $permissions.AddAccessRule($rule1)
         $newruleset = 1
-        write-host "Gave NetworkService FULLCONTROL access to cert" -ForegroundColor Yellow
+        write-host "Gave NetworkService READ access to cert" -ForegroundColor Yellow
     }    
     }
 
