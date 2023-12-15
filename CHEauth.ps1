@@ -138,7 +138,7 @@ if ($certAns -eq "y"){
         write-host "Added NetworkService with READ access to cert" -ForegroundColor Yellow
     }
     else {
-    if ($identnetwork.FileSystemRights -ne 'FullControl'){
+    if ($identnetwork.FileSystemRights -ne 'Read'){
         $rule1 = new-object security.accesscontrol.filesystemaccessrule($networkServiceSID, 'Read', 'None', 'None', 'Allow')
         $permissions.AddAccessRule($rule1)
         $newruleset = 1
