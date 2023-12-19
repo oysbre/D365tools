@@ -125,7 +125,7 @@ $vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea
     
     if (($vcdlver -notmatch $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
        write-host "Installing MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
-       $vcargs = "/p /norestart"
+       $vcargs = "/install /passive /norestart"
         Start-Process $vcfile -Wait -ArgumentList $vcargs
         remove-item $vcfile -force
     }#end if ver check
