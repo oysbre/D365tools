@@ -9,6 +9,10 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 
+Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+if ((get-packageprovider nuget) -eq $NULL){
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+}
 
 Set-MpPreference -DisableRealtimeMonitoring $true 
  #region Install tools
