@@ -9,23 +9,7 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 
-Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-if ((get-packageprovider nuget) -eq $NULL){
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-}
-
-if(-not (Get-Module d365fo.tools -ListAvailable)){
-Install-Module d365fo.tools -Force
-}
-
-Set-MpPreference -DisableRealtimeMonitoring $true 
- #region Install tools
-Install-Module -Name SqlServer -AllowClobber
-Add-D365WindowsDefenderRules
-Invoke-D365InstallAzCopy
-Invoke-D365InstallSqlPackage
-#endregion
-
+#----functions -----------
 function Import-Module-SQLPS {
      push-location
     import-module sqlps 3>&1 | out-null
@@ -89,7 +73,32 @@ function Set-RegistryValueForAllUsers {
     } 
 }#end function "Set-RegistryValueForAllUsers"
 CLS
-Write-host "This script runs several optimizing settings for the CHE environment." -foregroundcolor Cyan
+Write-host "This script runs several optimizationssettings for the CHE environment." -foregroundcolor Cyan
+
+#Install Nuget,PowershellGet and D365fo.tools
+Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
+Write-host "Installing NuGet..." -foregroundcolor yellow
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+}
+Import-PackageProvider -Name NuGet 
+if ((get-module -name PowerShellGet) -eq $null){
+Write-host "Installing PowershellGet..." -foregroundcolor yellow
+Install-Module -Name PowerShellGet -Force
+}
+if(-not (Get-Module d365fo.tools -ListAvailable)){
+Write-host "Installing D365fo.tools..." -foregroundcolor yellow
+Install-Module d365fo.tools -Force
+}
+
+#Disable realtimemonitoring
+Set-MpPreference -DisableRealtimeMonitoring $true 
+#region Install tools
+Install-Module -Name SqlServer -AllowClobber
+Add-D365WindowsDefenderRules
+Invoke-D365InstallAzCopy
+Invoke-D365InstallSqlPackage
+#endregion
 
 #Herestrings for Powershellscripts
 $unsetcmd = @'
@@ -117,15 +126,13 @@ Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 #Download powershellscripts for LCS download
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "$DesktopPath\DownloadWithAzCopy.ps1"
 
-# MS Visual C++ 2022 redist
+# MS Visual C++ 2022 redist install/update
 $DownloadPath = "$env:temp"
 $vcurl = 'https://aka.ms/vs/17/release/VC_redist.x64.exe'
 $webclient = New-Object System.Net.WebClient
 $vcfilename  = [System.IO.Path]::GetFileName($vcurl)
 $vcfile      = "$DownloadPath\$vcfilename"
 $webclient.DownloadFile($vcurl, $vcfile)
-    
-
 if (test-path $vcfile){
 $vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
 $vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
@@ -205,17 +212,6 @@ else
     Write-Host "preloadEnabled already active" -ForegroundColor Yellow
 }
 
-#Install Nuget
-If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
-Write-host "Installing NuGet." -foregroundcolor yellow
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-}
-Import-PackageProvider -Name NuGet 
-Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-if ((get-module -name PowerShellGet) -eq $null){
-Install-Module -Name PowerShellGet -Force
-}
-
 
 #Load SQL module
 if(get-module sqlps){"yes"}else{"no"}
@@ -223,9 +219,8 @@ if(get-module sqlps){"yes"}else{"no"}
  
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
-cls
 
-#add SQL service account to Perform volume maint task
+#add SQL service account to Perform volume maint task to speedup database expansion and restore of BAK files
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
 
@@ -371,8 +366,7 @@ Else {
     $packages = @(
         "googlechrome"
         "notepadplusplus.install"
-	"microsoft-edge"
- 	"sql-server-management-studio"
+	"sql-server-management-studio"
   	"7zip.install"
     )
 
