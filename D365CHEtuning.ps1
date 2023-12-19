@@ -14,10 +14,13 @@ if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
+if(-not (Get-Module d365fo.tools -ListAvailable)){
+Install-Module d365fo.tools -Force
+}
+
 Set-MpPreference -DisableRealtimeMonitoring $true 
  #region Install tools
 Install-Module -Name SqlServer -AllowClobber
-Install-Module -Name d365fo.tools -AllowClobber
 Add-D365WindowsDefenderRules
 Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
