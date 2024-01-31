@@ -308,7 +308,7 @@ RECONFIGURE;
 GO
 "@
 Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
-Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30 -TrustServerCertificate
+Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }#end if $sysmeminMB
 
 #Set the password to never expire
