@@ -1,4 +1,4 @@
-#Use E/D8v5 vmsize and 15x32GB HDDs for the new VM config
+#Use E/D8v5 vmsize and 7x32 GB or 15x32GB Standard HDDs for the new VM config
 
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
