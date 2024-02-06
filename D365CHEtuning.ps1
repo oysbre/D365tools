@@ -145,7 +145,7 @@ $vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea
     }#end if ver check
 
 }#end if VcDlfile check
-else {write-host "MS Visual C++ download not found in $($DownloadPath). Newer deploypackages may fail" -ForegroundColor red;}
+else {write-host "MS Visual C++ download not found in $($DownloadPath). Newer ServiceUpdates deploy may fail." -ForegroundColor red;}
 
 #Set AppPool settings for AOSERVICE
 Import-Module WebAdministration
