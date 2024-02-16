@@ -1,7 +1,7 @@
 # D365tools
 'D365CHEtuning.ps1' is used post-creation of CloudHosted D365 DEV servers to tune the performance and add some tools.<br> Open Powershell and copy paste command to download script to Desktop<br>
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1" <br><br>
-- Installs latest SSMS, EDGE if needed, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
+- Installs latest SSMS, EDGE if needed, 7Zip, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
 - Installs/update Visual C++ redist needed for 10.0.36 and up
 - Add powershellscript "DownloadWithAzCopy.ps1" on Desktop to download files from LCS
 - Add powershellscripts to Start & Stop D365 dependent services on Desktop
