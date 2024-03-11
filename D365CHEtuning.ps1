@@ -78,17 +78,22 @@ Write-host "This script runs several optimizationssettings for the CHE environme
 #Install Nuget,PowershellGet and D365fo.tools
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
-Write-host "Installing NuGet..." -foregroundcolor yellow
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+	Write-host "Installing NuGet..." -foregroundcolor yellow
+	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 Import-PackageProvider -Name NuGet 
+
 if ((get-module -name PowerShellGet) -eq $null){
-Write-host "Installing PowershellGet..." -foregroundcolor yellow
-Install-Module -Name PowerShellGet -Force
+	Write-host "Installing PowershellGet..." -foregroundcolor yellow
+	Install-Module -Name PowerShellGet -Force
 }
+
 if(-not (Get-Module d365fo.tools -ListAvailable)){
 Write-host "Installing D365fo.tools..." -foregroundcolor yellow
 Install-Module d365fo.tools -Force
+}
+else {
+Update-Module -name d365fo.tools -Force
 }
 
 #Disable realtimemonitoring
