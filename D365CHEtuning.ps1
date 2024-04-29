@@ -82,19 +82,28 @@ If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
 	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 Import-PackageProvider -Name NuGet 
-
 if ((get-module -name PowerShellGet) -eq $null){
 	Write-host "Installing PowershellGet..." -foregroundcolor yellow
 	Install-Module -Name PowerShellGet -Force
 }
 
+#Install/update d365fo.tools
 if(-not (Get-Module d365fo.tools -ListAvailable)){
 Write-host "Installing D365fo.tools..." -foregroundcolor yellow
 Install-Module d365fo.tools -Force
 }
 else {
-Update-Module -name d365fo.tools -Force
-}
+Write-host "Updating D365fo.tools..." -foregroundcolor yellow
+$releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
+$tagver = (Invoke-WebRequest $releases -ea 0| ConvertFrom-Json)[0].tag_name
+if ($tagver){
+    $fover = (get-installedmodule d365fo.tools).version.tostring()
+    if ($tagver -gt $fover){
+        Update-Module -name d365fo.tools -Force
+    }#end if version check
+    }#end if tagver
+}# end else
+
 
 #Disable realtimemonitoring
 Set-MpPreference -DisableRealtimeMonitoring $true 
