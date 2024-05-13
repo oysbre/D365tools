@@ -90,8 +90,8 @@ if ((get-module -name PowerShellGet) -eq $null){
 #Install/update d365fo.tools
 if(-not (Get-Module d365fo.tools -ListAvailable)){
 Write-host "Installing D365fo.tools..." -foregroundcolor yellow
-Install-Module ImportExcel -Force -RequiredVersion 7.8.6
-Import-Module ImportExcel -Verbose -RequiredVersion 7.8.6
+Install-Module ImportExcel -Force -RequiredVersion 7.8.7
+Import-Module ImportExcel -Verbose -RequiredVersion 7.8.7
 Install-Module d365fo.tools -Force
 }
 else {
