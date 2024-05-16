@@ -87,26 +87,21 @@ if ((get-module -name PowerShellGet) -eq $null){
 	Install-Module -Name PowerShellGet -Force
 }
 
-#Install/update d365fo.tools
+#install/update d365fo.tools
 if(-not (Get-Module d365fo.tools -ListAvailable)){
-Write-host "Installing D365fo.tools..." -foregroundcolor yellow
-Install-Module ImportExcel -Force -RequiredVersion 7.8.7
-Import-Module ImportExcel -Verbose -RequiredVersion 7.8.7
-Install-Module d365fo.tools -Force
+    Write-host "Installing D365fo.tools..." -foregroundcolor yellow
+    Install-Module d365fo.tools -Force
 }
 else {
-Write-host "Updating D365fo.tools..." -foregroundcolor yellow
-$releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
-$tagver = (Invoke-WebRequest $releases -ea 0| ConvertFrom-Json)[0].tag_name
-if ($tagver){
-    $fover = (get-installedmodule d365fo.tools).version.tostring()
-    if ($tagver -gt $fover){
-    	Install-Module ImportExcel -Force -RequiredVersion 7.8.6
-	Import-Module ImportExcel -RequiredVersion 7.8.6
-        Update-Module -name d365fo.tools -Force
-    }#end if version check
-    }#end if tagver
-}# end else
+    $releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
+    $tagver = ((Invoke-WebRequest $releases -ea 0 | ConvertFrom-Json)[0].tag_name).tostring()
+        if ($tagver){
+            $fover = (get-installedmodule d365fo.tools).version.tostring()
+            if ([System.Version]$tagver -gt [System.Version]$fover){
+             Update-Module -name d365fo.tools -Force
+            }#end if gt version check
+        }#end if tagver 
+}#end else
 
 
 #Disable realtimemonitoring
