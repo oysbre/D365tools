@@ -54,7 +54,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 @("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {start-service -name "$_" }
 '@
 
-#Create a Scheduletask and rearm script under c:\D365scripts to run "rearm check" during logon.
+#Create a Scheduletask and rearm-script under c:\D365scripts to run "rearm check" during logon.
 $rearmscript = @'
 #Check rearmcount
 [string]$slmgrRearmcount = (cscript c:\windows\system32\slmgr.vbs /dlv | select-string -pattern "Remaining Windows rearm count")
@@ -73,6 +73,8 @@ $MessageTitle = "Re-arm"
 $Result = [System.Windows.Forms.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
 }
 '@
+
+#create folder D365scripts under c:\
 if (-not(test-path "c:\D365scripts")){new-item -ItemType directory -Path "c:\D365scripts"}
 Unregister-ScheduledTask -TaskName 'Auto Rearm' -Confirm:$false -ea 0
 remove-item "c:\D365scripts\rearm.ps1" -force -ea 0
@@ -104,14 +106,10 @@ else
 
 #Fetch the site
 $site = Get-Website -Name $siteName
-
-
 if(!$site)
 {
     Write-Host "Site $siteName could not be found, continueing with the rest of the script!" -ForegroundColor Red
-    
 }
-#got the site!
 else { 
 #Fetch the application pool
 $appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
@@ -166,7 +164,9 @@ Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
 #Download powershellscripts for packagedeploy and LCS download
+write-host "Downloading DeployPackage.ps1 script to deploy package locally" -foregroundcolor Yellow
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DeployPackage.ps1" -outfile "c:\D365scripts\DeployPackage.ps1"
+write-host "Downloading DownloadWithAzcopy.ps1 script to download filles/packages from LCS fast" -foregroundcolor Yellow
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "c:\D365scripts\DownloadWithAzCopy.ps1"
 
 #Install d365tools and set WinDefender rules
