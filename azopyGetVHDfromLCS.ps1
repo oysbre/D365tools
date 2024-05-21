@@ -7,7 +7,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 #Set target downloadpath. Default c:\temp
 $targetdir = "C:\temp"
-$D365VHDname = "D365VHD-10_0_37_part"
+$D365VHDname = "D365VHD-10_0_39_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
 #Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
@@ -18,7 +18,7 @@ $URLS = @(
 ,<#2#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/715c007a-35aa-4600-93c7-32ada37ffc84/AX7ProductName-12-a1ebc659-a7c2-47df-a322-c21f63e70eea?sv=2018-03-28&sr=b&sig=aA2yS1ENjZzVU89GS1XN8BZxUXqtuUWR6rQE%2BwAkB%2Fs%3D&se=2023-03-30T07%3A56%3A25Z&sp=r"
 ,<#3#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/0323fde0-b4bd-4514-b127-c1cc3975422b/AX7ProductName-12-8c734fb9-c066-45de-aae9-155bfabb26e4?sv=2018-03-28&sr=b&sig=DekjttYFTS6DuuuxjzLo0IMLuKr07j7u%2F8v%2Bpn9UBig%3D&se=2023-03-30T07%3A56%3A36Z&sp=r"
 ,<#4#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/51673bcf-9e85-4e65-bf36-5ce80a561e94/AX7ProductName-12-2acb6aa3-216e-43fa-8405-b58323188a45?sv=2018-03-28&sr=b&sig=%2BmMOMx5gqQvtMhJ4fPutDZwx9LEFgaUCC7CWpz3OTqU%3D&se=2023-03-30T07%3A56%3A49Z&sp=r"
-,<#5#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/51673bcf-9e85-4e65-bf36-5ce80a561e94/AX7ProductName-12-2acb6aa3-216e-43fa-8405-b58323188a45?sv=2018-03-28&sr=b&sig=%2BmMOMx5gqQvtMhJ4fPutDZwx9LEFgaUCC7CWpz3OTqU%3D&se=2023-03-30T07%3A56%3A49Z&sp=r"
+
 
 )
 #--------------------------------------
