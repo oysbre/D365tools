@@ -27,6 +27,11 @@ write-host "Set the password to never expire for user Administrator and current 
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
+#set Dynamics Deployment folder
+if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -eq "f:\deployment"){
+Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\deployment" -Type String
+}
+
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
