@@ -27,7 +27,7 @@ write-host "Set the password to never expire for user Administrator and current 
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
-#set Dynamics Deployment folder
+#set Dynamics Deployment folder in registry
 if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Deployment"){
 Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
 }
@@ -37,6 +37,7 @@ if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
+#Powershellscript variables.
 $unsetcmd = @'
 #Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
@@ -88,7 +89,7 @@ Register-ScheduledTask -TaskName 'Auto Rearm' -InputObject $Task -User "System"
 Import-Module WebAdministration
 $siteName = "AOSSERVICE"
 
-#Enable IIS Application Initialization
+#Enable IIS Application Initialization for faster start of FO AOSSERVICE
 $webAppInit = Get-WindowsFeature -Name "Web-AppInit"
 if(!$webAppInit.Installed) 
 {
@@ -442,7 +443,7 @@ write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 #Rename server due to DevOPS/VisualStudio "uniqueness"
 $newname = "<newname>"
 If (($env:computername -like "MININT*") -or ($env:computername -like "DV*")){
-If ($newname -eq "<newname>"){write-host "New name for DEVserver not set. Set new:" -foregroundcolor cyan; $newname = read-host;$newname=$newname.trim() }
+If ($newname -eq "<newname>"){write-host "New name for DEV server not set. Set new:" -foregroundcolor cyan; $newname = read-host;$newname=$newname.trim() }
 $sqlOldnamequery = @'
 SELECT @@SERVERNAME as servername
 '@
@@ -452,7 +453,7 @@ Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "DynamicsAxReportS
 }
 #End set servername from MS default
 
-#Create user prov shortcut to desktop
+#Create user provision shortcut to desktop
 if (!(test-path ("$env:USERPROFILE\desktop\AdminUserProvisioning.lnk"))){
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\desktop\AdminUserProvisioning.lnk")
@@ -474,7 +475,7 @@ Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Ser
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 
-#Install packages
+#Install packages with Chocolatey
 If (Test-Path -Path "$env:ProgramData\Chocolatey") {
     choco upgrade chocolatey -y -r
     choco upgrade all --ignore-checksums -y -r
@@ -519,7 +520,7 @@ Else {
 }
 #end install packages
 
-#install storage emulator
+#install Azure storage emulator
 write-host "Installing Azure storage emulator..." -foregroundcolor yellow
 (new-object System.Net.WebClient).DownloadFile('https://go.microsoft.com/fwlink/?linkid=717179&clcid=0x409', "$env:temp\microsoftazurestorageemulator.msi");
 
@@ -542,7 +543,7 @@ Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB
 Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }
 
-#Enable TraceFlags on SQL instances
+#Enable TraceFlags on SQL instance - 7412 enables live execution plan
 $StartupParametersPost2016 = @("-T7412")
 #get all the instances on server
 $instproperty = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL"
@@ -573,7 +574,7 @@ foreach($parameter in $parameters) {
 } # end foreach $instance
 } # end if $instances
 
-#add SQL service account to Perform volume maint task
+#add SQL service account to Perform volume maint task to speed up restore/backup
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
 
@@ -656,8 +657,7 @@ Write-Host ""
 }#end $account check empty
 #End SQLservice account VolMaintask
 
-
-#AzCopy
+#install/update AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
 	Write-host "Installing AzCopy..." -foregroundcolor Yellow
 	$ProgressPreference = 'SilentlyContinue'
