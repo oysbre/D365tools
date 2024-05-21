@@ -29,7 +29,7 @@ Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([
 
 #set Dynamics Deployment folder
 if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Deployment"){
-Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\deployment" -Type String
+Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
 }
 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
