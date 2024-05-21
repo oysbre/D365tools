@@ -447,6 +447,14 @@ Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "DynamicsAxReportS
 }
 #End set servername from MS default
 
+#Create user prov shortcut to desktop
+if (!(test-path ("$env:USERPROFILE\desktop\AdminUserProvisioning.lnk"))){
+$WshShell = New-Object -comObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\desktop\AdminUserProvisioning.lnk")
+$Shortcut.TargetPath = "C:\AOSService\PackagesLocalDirectory\bin\AdminUserProvisioning.exe"
+$Shortcut.Save()
+}
+
 #Disable RealTime monitoring
 Set-MpPreference -DisableRealtimeMonitoring $true
 
