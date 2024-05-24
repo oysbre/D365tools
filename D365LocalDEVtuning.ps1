@@ -3,6 +3,7 @@
 -rename server, sqlserver and SSRS
 -set servicedrive as an environmental path if not exists
 -set Dynamics Deployment folderpath in registry
+-set SNI client to trust server certficate
 -Install NuGet, IIS App init, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
 -create and setup re-arm script and schedule during logon
 -optimize SQL startup parameter traceflags
@@ -50,7 +51,7 @@ if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
 	$env:servicedrive = "c:"
 }
 
-#Get SQL version and set trustservercertificate parameter for queries
+#Get SQL version and set trustservercertificate parameter for queries and SNI client
 #(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
 Uninstall-Module -AllVersions SqlPs -ea 0
 
@@ -62,6 +63,7 @@ foreach ($i in $inst)
 }
 $sqlver = $sqlver | sort desc
 if ($sqlver -ge 16){
+Set-ItemProperty -path "HKLM:\SOFTWARE\Microsoft\MSSQLServer\Client\SNI11.0\GeneralFlags\Flag2" -name value -value 1
 $trustservercert = 1
 }
 
