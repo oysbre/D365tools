@@ -1,4 +1,5 @@
-#Powershellscript to "tune" the local D365 VHD image
+#Powershellscript to tune/optimize/fix the local D365 VHD image
+
 #Check if PS Console is running as "elevated"
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
@@ -32,6 +33,7 @@ if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name In
 Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
 }
 
+#Install NuGet
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
@@ -54,6 +56,15 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 @("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {start-service -name "$_" }
 '@
 
+#Create powershellscripts on Desktop to start/stop related D365 services. Also script to remove "readonly" flag on RDL files.
+$DesktopPath = [Environment]::GetFolderPath("Desktop")
+Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
+Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
+Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
+
+#create folder C:\D365scripts for powershellscripts
+if (-not(test-path "c:\D365scripts")){write-host "Creating folder C:\D365scripts" -foregroundcolor yellow;new-item -ItemType directory -Path "c:\D365scripts"}
+
 #Create a Scheduletask and rearm-script under c:\D365scripts to run "rearm check" during logon.
 $rearmscript = @'
 #Check rearmcount
@@ -74,8 +85,7 @@ $Result = [System.Windows.Forms.MessageBox]::Show($MessageBody,$MessageTitle,$Bu
 }
 '@
 
-#create folder D365scripts under c:\
-if (-not(test-path "c:\D365scripts")){new-item -ItemType directory -Path "c:\D365scripts"}
+
 Unregister-ScheduledTask -TaskName 'Auto Rearm' -Confirm:$false -ea 0
 remove-item "c:\D365scripts\rearm.ps1" -force -ea 0
 $rearmscript | out-file -filepath c:\D365scripts\rearm.ps1 -encoding utf8 -force -Width 2147483647
@@ -87,28 +97,26 @@ $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'Auto Rearm' -InputObject $Task -User "System"
 
-#Set AppPool settings for AOSERVICE
+#Enable IIS Application Initialization for faster start of FO 
 Import-Module WebAdministration
 $siteName = "AOSSERVICE"
-
-#Enable IIS Application Initialization for faster start of FO AOSSERVICE
 $webAppInit = Get-WindowsFeature -Name "Web-AppInit"
-if(!$webAppInit.Installed) 
+if (!($webAppInit.Installed))
 {
-    Write-Host "$($webAppInit.DisplayName) not present, installing"
-    Install-WindowsFeature $webAppInit -ErrorAction Stop
+    Write-Host "$($webAppInit.DisplayName) not present, installing..." -foregroundcolor yellow
+    Install-WindowsFeature $webAppInit -ErrorAction Continue
     Write-Host "`nInstalled $($webAppInit.DisplayName)`n" -ForegroundColor Green
 }
 else 
 {
-    Write-Host "$($webAppInit.DisplayName) was already installed" -ForegroundColor Yellow
+    Write-Host "$($webAppInit.DisplayName) was already installed" -ForegroundColor Green
 }
 
 #Fetch the site
 $site = Get-Website -Name $siteName
 if(!$site)
 {
-    Write-Host "Site $siteName could not be found, continueing with the rest of the script!" -ForegroundColor Red
+    Write-Host "Site $siteName could not be found, continuing with the rest of the script!" -ForegroundColor Red
 }
 else { 
 #Fetch the application pool
@@ -157,14 +165,8 @@ $Settings = New-ScheduledTaskSettingsSet
 $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings
 Register-ScheduledTask -TaskName 'WarmupD365' -InputObject $Task -User "System"
 
-#Create powershellscripts on Desktop to start/stop services used before DB sync
-$DesktopPath = [Environment]::GetFolderPath("Desktop")
-Set-Content -Path "$DesktopPath\UnsetReadonlyFlag.ps1" -Value $unsetcmd
-Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
-Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
-
 #Download powershellscripts for packagedeploy and LCS download
-write-host "Downloading DeployPackage.ps1 script to deploy package locally" -foregroundcolor Yellow
+write-host "Downloading DeployPackage.ps1 script for deploypackage..." -foregroundcolor Yellow
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DeployPackage.ps1" -outfile "c:\D365scripts\DeployPackage.ps1"
 write-host "Downloading DownloadWithAzcopy.ps1 script to download filles/packages from LCS fast" -foregroundcolor Yellow
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "c:\D365scripts\DownloadWithAzCopy.ps1"
@@ -443,7 +445,7 @@ write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 #Rename server due to DevOPS/VisualStudio "uniqueness"
 $newname = "<newname>"
 If (($env:computername -like "MININT*") -or ($env:computername -like "DV*")){
-If ($newname -eq "<newname>"){write-host "New name for DEV server not set. Set new:" -foregroundcolor cyan; $newname = read-host;$newname=$newname.trim() }
+If ($newname -eq "<newname>"){write-host "New name for DEV server not set. Set new (max 15 characters):" -foregroundcolor cyan; $newname = read-host;$newname=$newname.trim() }
 $sqlOldnamequery = @'
 SELECT @@SERVERNAME as servername
 '@
@@ -454,9 +456,9 @@ Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "DynamicsAxReportS
 #End set servername from MS default
 
 #Create user provision shortcut to desktop
-if (!(test-path ("$env:USERPROFILE\desktop\AdminUserProvisioning.lnk"))){
+if (!(test-path ("$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk"))){
 $WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\desktop\AdminUserProvisioning.lnk")
+$Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk")
 $Shortcut.TargetPath = "C:\AOSService\PackagesLocalDirectory\bin\AdminUserProvisioning.exe"
 $Shortcut.Save()
 }
@@ -474,14 +476,12 @@ Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Ser
 #Set powerplan to HIGH PERFORMANCE
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
-
 #Install packages with Chocolatey
 If (Test-Path -Path "$env:ProgramData\Chocolatey") {
     choco upgrade chocolatey -y -r
     choco upgrade all --ignore-checksums -y -r
 }
 Else {
-
     Write-Host "Installing Chocolatey"
     Set-ExecutionPolicy Bypass -Scope Process -Force; 
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
@@ -506,9 +506,7 @@ Else {
         
         "googlechrome"
         "notepadplusplus.install"
-	"microsoft-edge"
- 	"7zip.install"
-        
+	"7zip.install"
     )
 
     # Install each program
@@ -520,7 +518,7 @@ Else {
 }
 #end install packages
 
-#install Azure storage emulator
+#install Azure storage emulator used for Retailserver
 write-host "Installing Azure storage emulator..." -foregroundcolor yellow
 (new-object System.Net.WebClient).DownloadFile('https://go.microsoft.com/fwlink/?linkid=717179&clcid=0x409', "$env:temp\microsoftazurestorageemulator.msi");
 
@@ -543,7 +541,7 @@ Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB
 Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
 }
 
-#Enable TraceFlags on SQL instance - 7412 enables live execution plan
+#Enable TraceFlags on SQL instance - 7412 enables live execution plans
 $StartupParametersPost2016 = @("-T7412")
 #get all the instances on server
 $instproperty = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL"
@@ -577,11 +575,8 @@ foreach($parameter in $parameters) {
 #add SQL service account to Perform volume maint task to speed up restore/backup
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
-
 if ($accountToAdd -ne $NULL){
 $sidstr = $null
-
-
 try {
        $ntprincipal = new-object System.Security.Principal.NTAccount "$accountToAdd"
        $sid = $ntprincipal.Translate([System.Security.Principal.SecurityIdentifier])
@@ -589,13 +584,13 @@ try {
 } catch {
        $sidstr = $null
 }
-Write-Host "Account: $($accountToAdd)" -ForegroundColor White
+Write-Host "Account: $($accountToAdd)" -ForegroundColor CYAN
 if( [string]::IsNullOrEmpty($sidstr) ) {
        Write-Host "Account not found!" -ForegroundColor Red
        #exit -1
 }
 
-Write-Host "Account SID: $($sidstr)" -ForegroundColor White
+Write-Host "Account SID: $($sidstr)" -ForegroundColor CYAN
 $tmp = ""
 $tmp = [System.IO.Path]::GetTempFileName()
 Write-Host "Exporting current Local Security Policy" -ForegroundColor Yellow
@@ -608,9 +603,7 @@ foreach($s in $c) {
              $x = $s.split("=",[System.StringSplitOptions]::RemoveEmptyEntries)
              $currentSetting = $x[1].Trim()
        }
-}
-
-
+}#end foreach $s
 if( $currentSetting -notlike "*$($sidstr)*" ) {
        Write-Host "Modify Setting ""Perform Volume Maintenance Task""" -ForegroundColor Yellow
        
@@ -619,10 +612,8 @@ if( $currentSetting -notlike "*$($sidstr)*" ) {
        } else {
              $currentSetting = "*$($sidstr),$($currentSetting)"
        }
-       
        Write-Host "$currentSetting"
-       
-       $outfile = @"
+$outfile = @"
 [Unicode]
 Unicode=yes
 [Version]
@@ -671,14 +662,14 @@ If (!(test-path "C:\windows\AzCopy.exe")){
 else {
     $azcopyupdate = & azcopy -h | select-string -pattern "newer version"
     if ($azcopyupdate){
-    Write-host "Updating AzCopy..." -foregroundcolor Yellow
-    $ProgressPreference = 'SilentlyContinue'
-    Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
-    Unblock-File $env:temp\AzCopy.zip
-    Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
-    Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
-    remove-item $env:temp\AzCopy.zip -force
-    remove-item $env:temp\AzCopy -force -Recurse
+    	Write-host "Updating AzCopy..." -foregroundcolor Yellow
+    	$ProgressPreference = 'SilentlyContinue'
+    	Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    	Unblock-File $env:temp\AzCopy.zip
+    	Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
+    	Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
+    	remove-item $env:temp\AzCopy.zip -force
+    	remove-item $env:temp\AzCopy -force -Recurse
     }
 }#end AZcopy  
 
@@ -687,9 +678,28 @@ If (!(test-path "c:\temp\dixf")){
 New-Item -Path "c:\temp" -Name "dixf" -ItemType "directory"
 }
 
-#set timezone
-Write-host "Set timezone to W. Europe Standard Time..." -foregroundcolor Yellow
-& tzutil  /s "W. Europe Standard Time"
+#set timezone based on IP address (estimated)
+Write-host "Set timezone based on IP location (estimated)..." -foregroundcolor Yellow
+[string]$IPAddress = (Invoke-WebRequest -Uri 'https://ifconfig.me/ip' -ContentType 'text/plain' -UseBasicParsing -ea 0).Content.Trim()
+if ($IPaddress){ 
+    [string]$IANATimeZone = (Invoke-RestMethod -Method Get -Uri "http://ip-api.com/json/$IPAddress" -UseBasicParsing -ea 0).timezone
+    if ($IANATimeZone){
+        try {
+            $zonesurl = 'https://raw.githubusercontent.com/unicode-org/cldr/master/common/supplemental/windowsZones.xml'
+            [xml]$xml = (Invoke-WebRequest -Uri $zonesurl -ContentType 'application/xml' -UseBasicParsing).Content
+        }
+        catch {
+            throw "Failed to obtain time zone XML map from GitHub: $_"
+        }
+
+        $zones = $xml.supplementalData.windowsZones.mapTimezones.mapZone
+        $win_tz = ($zones | Where-Object type -Match $IANATimeZone).other
+        if ($win_tz){
+            set-timezone -name $win_tz
+        }
+        else {write-host "Couldn't convert IANA timezone to Windows format" -ForegroundColor red }
+    }#end iana
+}#end $ipaddress
 
 write-host "All set. Restart the computer by pressing any key" -foregroundcolor Cyan
 Pause
