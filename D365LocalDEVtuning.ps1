@@ -568,7 +568,14 @@ write-host "Installing Azure storage emulator..." -foregroundcolor yellow
 #Get server mem in MB and set SQL instance max memory 1/4 of that
 $sysraminMB =  Get-WmiObject -class "cim_physicalmemory" | Measure-Object -Property Capacity -Sum | % {[Math]::Round($_.sum/1024/1024/4)}
 If ($sysraminmb){
-$sqlQmaxmem = @"
+$sqlQmaxmem = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 60
+'query' = ''
+'trustservercertificate' = $trustservercert
+}
+$sqlQmaxmem.query = @"
 sp_configure 'show advanced options', 1;
 GO
 RECONFIGURE;
@@ -579,8 +586,8 @@ RECONFIGURE;
 GO
 "@
 Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
-Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
-}
+Invoke-SqlCmd @sqlQmaxmem
+}#end if $sysmeminMB
 
 #Enable TraceFlags on SQL instance - 7412 enables live execution plans
 $StartupParametersPost2016 = @("-T7412")
