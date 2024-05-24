@@ -15,6 +15,7 @@ iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -o
 - Show computericon on Desktop with servername.
 
 'D365LocalDEVtuning.ps1' is used post-creation of Local D365 DEV environment to tune performance and rename the server.
+Use many of the same tuning settings from Cloudhosted script.
 
 'azopyGetVHDfromLCS.ps1' downloads large files (VHD) from LCS using AzCopy.
 Generate SAS links in LCS and paste them into the script in the right sequenced order! aka: part1, part 2 etc
