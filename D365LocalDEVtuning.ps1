@@ -6,6 +6,7 @@
 -create and setup re-arm script and schedule during logon
 -optimize SQL startup parameter traceflags
 -grant SQL serviceaccount 'Perform Volume Maintenance Task' privelege
+-set powerplan til HIGH PERFORMANCE
 -set timezone based on IP location
 -checks SQL version for trustservercertificate
 #>
