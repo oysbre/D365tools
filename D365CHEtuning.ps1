@@ -10,11 +10,32 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 $ProgressPreference = 'SilentlyContinue'
 
 #----functions -----------
-function Import-Module-SQLPS {
-     push-location
-    import-module sqlps 3>&1 | out-null
-    pop-location
-}#end function Import-Module-SQLPS
+function Import-Module-SQLServer {
+push-location
+import-module sqlserver 3>&1 | out-null
+pop-location
+}#end function Import-Module-SQLServer
+
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
+ 
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
+
+#(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
+Uninstall-Module -AllVersions SqlPs -ea 0
+
+#get SQL version and set parameter trustservercert
+$inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
+foreach ($i in $inst)
+{
+   $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i
+   $sqlver += (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").Version
+}
+$sqlver = $sqlver | sort desc
+if ($sqlver -ge 16){
+$trustservercert = 1
+}
 
 function Set-RegistryValueForAllUsers { 
         [CmdletBinding()] 
@@ -107,7 +128,6 @@ else {
 #Disable realtimemonitoring
 Set-MpPreference -DisableRealtimeMonitoring $true 
 #region Install tools
-Install-Module -Name SqlServer -AllowClobber
 Add-D365WindowsDefenderRules
 Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
@@ -226,13 +246,6 @@ else
 }
 
 
-#Load SQL module
-if(get-module sqlps){"yes"}else{"no"}
- Import-Module-SQLPS
- 
-if(get-module sqlps){"yes"}else{"no"}
-Import-Module-SQLPS
-
 #add SQL service account to Perform volume maint task to speedup database expansion and restore of BAK files
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
@@ -310,7 +323,14 @@ Write-Host ""
 #Get server mem in MB and set SQL instance max memory 1/4 of that
 $sysraminMB =  Get-WmiObject -class "cim_physicalmemory" | Measure-Object -Property Capacity -Sum | % {[Math]::Round($_.sum/1024/1024/4)}
 If ($sysraminmb){
-$sqlQmaxmem = @"
+$sqlQmaxmem = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 60
+'query' = ''
+'trustservercertificate' = $trustservercert
+}
+$sqlQmaxmem.query = @"
 sp_configure 'show advanced options', 1;
 GO
 RECONFIGURE;
@@ -321,7 +341,7 @@ RECONFIGURE;
 GO
 "@
 Write-host "SQL instance Max memory set to $($sysraminMB) of total $($sysraminMB*4) megabyte" -foregroundcolor yellow
-Invoke-SqlCmd -ServerInstance localhost -Query $sqlQmaxmem -EA 0 -querytimeout 30
+Invoke-SqlCmd @sqlQmaxmem
 }#end if $sysmeminMB
 
 #Set the password to never expire
@@ -379,8 +399,7 @@ Else {
     $packages = @(
         "googlechrome"
         "notepadplusplus.install"
-	"sql-server-management-studio"
-  	"7zip.install"
+	"7zip.install"
     )
 
     # Install each program
@@ -396,10 +415,6 @@ Write-Host "Setting Management Reporter to manual startup to reduce churn and Ev
 Get-D365Environment -FinancialReporter | Set-Service -StartupType Manual
 Stop-Service -Name MR2012ProcessService -Force
 Set-Service -Name MR2012ProcessService -StartupType Disabled
-
-#set timezone
-Write-Host 'Setting TimeZone to CET...' -ForegroundColor yellow
-& tzutil  /s "W. Europe Standard Time"
 
 #Enable TraceFlags on SQL instances
 $StartupParametersPost2016 = @("-T7412")
