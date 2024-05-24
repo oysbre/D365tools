@@ -7,6 +7,7 @@
 -optimize SQL startup parameter traceflags
 -grant SQL serviceaccount 'Perform Volume Maintenance Task' privelege
 -set timezone based on IP location
+-checks SQL version for trustservercertificate
 #>
 
 #Check if PS Console is running as "elevated"
@@ -41,6 +42,21 @@ Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([
 if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Deployment"){
 	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Deployment" -foregroundcolor yellow
 	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
+}
+
+#Get SQL version and set trustservercertificate parameter for queries
+#(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
+Uninstall-Module -AllVersions SqlPs -ea 0
+
+$inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
+foreach ($i in $inst)
+{
+   $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i
+   $sqlver += (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").Version
+}
+$sqlver = $sqlver | sort desc
+if ($sqlver -ge 16){
+$trustservercert = 1
 }
 
 #Install NuGet
@@ -455,11 +471,18 @@ $sqlpwd = (Get-Dfo365CredentialData).value
 $newname = "<newname>"
 If (($env:computername -like "MININT*") -or ($env:computername -like "DV*")){
 If ($newname -eq "<newname>"){write-host "New name for DEV server not set. Set new (max 15 characters):" -foregroundcolor cyan; $newname = read-host;$newname=$newname.trim() }
-$sqlOldnamequery = @'
+$sqlparams = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 60
+'query' = ''
+'trustservercertificate' = $trustservercert
+}
+$sqlparams.query = @'
 SELECT @@SERVERNAME as servername
 '@
-$sqlOldname = Invoke-SqlCmd -Query $sqlOldnamequery -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 60
-$env:COMPUTERNAME = $sqlOldname.servername
+
+$sqlOldname = Invoke-SqlCmd @sqlparams
 Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "DynamicsAxReportServer" 
 }
 #End set servername from MS default
@@ -478,7 +501,7 @@ Set-MpPreference -DisableRealtimeMonitoring $true
 #Disable UAC
 Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System -Name EnableLUA -Value 0
 
-#Disable http2
+#Disable HTTP22
 Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\HTTP\Parameters -Name EnableHttp2Tls -Value 0
 Set-ItemProperty -Path REGISTRY::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\HTTP\Parameters -Name EnableHttp2Cleartext -Value 0
 
