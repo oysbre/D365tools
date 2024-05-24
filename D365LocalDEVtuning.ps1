@@ -1,4 +1,13 @@
-#Powershellscript to tune/optimize/fix the local D365 VHD image
+<# Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
+-never expire password for user
+-rename server, sqlserver and SSRS
+-set Dynamics Deployment folderpath in registry
+-Install NuGet, IIS App init, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
+-create and setup re-arm script and schedule during logon
+-optimize SQL startup parameter traceflags
+-grant SQL serviceaccount 'Perform Volume Maintenance Task' privelege
+-set timezone based on IP location
+#>
 
 #Check if PS Console is running as "elevated"
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
@@ -28,15 +37,16 @@ write-host "Set the password to never expire for user Administrator and current 
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
-#set Dynamics Deployment folder in registry
+#set Dynamics Deployment folderpath in registry
 if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Deployment"){
-Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
+	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Deployment" -foregroundcolor yellow
+	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
 }
 
 #Install NuGet
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
 #Powershellscript variables.
@@ -84,7 +94,6 @@ $MessageTitle = "Re-arm"
 $Result = [System.Windows.Forms.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
 }
 '@
-
 
 Unregister-ScheduledTask -TaskName 'Auto Rearm' -Confirm:$false -ea 0
 remove-item "c:\D365scripts\rearm.ps1" -force -ea 0
@@ -439,7 +448,7 @@ function Get-Dfo365CredentialData {
 }
 
 $sqlpwd = (Get-Dfo365CredentialData).value
-write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
+
 #END Get the encrypted password for axdbadmin
 
 #Rename server due to DevOPS/VisualStudio "uniqueness"
@@ -701,6 +710,7 @@ if ($IPaddress){
     }#end iana
 }#end $ipaddress
 
+write-host "Decrypted SQLpassword is: " $($sqlpwd) -foregroundcolor Yellow
 write-host "All set. Restart the computer by pressing any key" -foregroundcolor Cyan
 Pause
 restart-computer
