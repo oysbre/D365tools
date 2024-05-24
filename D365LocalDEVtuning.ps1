@@ -45,10 +45,12 @@ if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name In
 	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Deployment" -foregroundcolor yellow
 	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
 }
+
 #set servicedrive as an environmental path
 if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
+	write-host "Env path for Servicedrive not found. Setting variable..." -foregroundcolor yellow
 	$env:servicedrive = "c:"
-}
+}#end if servicedrive
 
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
 #(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
