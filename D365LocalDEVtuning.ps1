@@ -21,18 +21,17 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 
-function Import-Module-SQLPS {
+function Import-Module-SQLServer {
 push-location
-import-module sqlps 3>&1 | out-null
+import-module sqlserver 3>&1 | out-null
 pop-location
-}#end function Import-Module-SQLPS
+}#end function Import-Module-SQLServer
 
-if(get-module sqlps){"yes"}else{"no"}
-Import-Module-SQLPS
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
  
-if(get-module sqlps){"yes"}else{"no"}
-#Import SQL PS commands
-Import-Module-SQLPS
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
 CLS
 Write-host "Tuning local D365 environment. Please wait..." -foregroundcolor Cyan
 
