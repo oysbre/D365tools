@@ -1,6 +1,7 @@
 <# Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
 -never expire password for user
 -rename server, sqlserver and SSRS
+-set servicedrive as an environmental path if not exists
 -set Dynamics Deployment folderpath in registry
 -Install NuGet, IIS App init, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
 -create and setup re-arm script and schedule during logon
@@ -43,6 +44,10 @@ Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([
 if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Deployment"){
 	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Deployment" -foregroundcolor yellow
 	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
+}
+#set servicedrive as an environmental path
+if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
+	$env:servicedrive = "c:"
 }
 
 #Get SQL version and set trustservercertificate parameter for queries
