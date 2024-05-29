@@ -1,3 +1,4 @@
+environ
 <# Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
 -never expire password for user
 -rename server, sqlserver and SSRS
@@ -52,7 +53,7 @@ if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name In
 #set ServiceDrive to C: as an environmental path if not set
 if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
 	write-host "Env path for Servicedrive not found. Setting variable..." -foregroundcolor yellow
-	[System.Environment]::SetEnvironmentVariable('ServiceDrive','C:')
+	[Environment]::SetEnvironmentVariable("ServiceDrive", "C:", "Machine")
 }#end if servicedrive
 
  #include VS2022 in TestStart
