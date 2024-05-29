@@ -49,7 +49,7 @@ if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name In
 #set servicedrive as an environmental path
 if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
 	write-host "Env path for Servicedrive not found. Setting variable..." -foregroundcolor yellow
-	$env:servicedrive = "c:"
+	[System.Environment]::SetEnvironmentVariable('Servicedrive','C:')
 }#end if servicedrive
 
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
