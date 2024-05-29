@@ -1,10 +1,11 @@
 <# Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
 -never expire password for user
 -rename server, sqlserver and SSRS
--set servicedrive as an environmental path if not exists
--set Dynamics Deployment folderpath in registry
+-set servicedrive to C: as an environmental path if not exists
+-set Dynamics Deployment folderpath in registry if not correct
 -set SNI client to trust server certficate
--Install NuGet, IIS App init, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
+-Install NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
+-enable  IIS App init and preload to faster start AOS
 -create and setup re-arm script and schedule during logon
 -optimize SQL startup parameter traceflags
 -grant SQL serviceaccount 'Perform Volume Maintenance Task' privelege
