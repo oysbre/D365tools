@@ -52,6 +52,7 @@ if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
 	write-host "Env path for Servicedrive not found. Setting variable..." -foregroundcolor yellow
 	[System.Environment]::SetEnvironmentVariable('ServiceDrive','C:')
 }#end if servicedrive
+
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
 #(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
 Uninstall-Module -AllVersions SqlPs -ea 0
