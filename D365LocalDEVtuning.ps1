@@ -4,13 +4,14 @@
 -set servicedrive to C: as an environmental path if not exists
 -set Dynamics Deployment folderpath in registry if not correct
 -set SNI client to trust server certficate
--Install NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
--enable  IIS App init and preload to faster start AOS
+-install NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
+-create AdminUserprovision shortcut to Desktop
+-enable IIS App init and pre-load to initialize AOS faster  and set application pool to always running, disable timeout.
 -create and setup re-arm script and schedule during logon
 -optimize SQL startup parameter traceflags
 -grant SQL serviceaccount 'Perform Volume Maintenance Task' privelege
 -set powerplan til HIGH PERFORMANCE
--set timezone based on IP location
+-set server timezone based on IP location
 -checks SQL version for trustservercertificate
 #>
 
