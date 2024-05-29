@@ -98,7 +98,7 @@ Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
 
 #create folder C:\D365scripts for powershellscripts
-if (-not(test-path "c:\D365scripts")){write-host "Creating folder C:\D365scripts" -foregroundcolor yellow;new-item -ItemType directory -Path "c:\D365scripts"}
+if (-not(test-path "c:\D365scripts")){write-host "Creating folder C:\D365scripts" -foregroundcolor yellow;new-item -ItemType directory -Path "c:\D365scripts"| Out-Null}
 
 #Create a Scheduletask and rearm-script under c:\D365scripts to run "rearm check" during logon.
 $rearmscript = @'
