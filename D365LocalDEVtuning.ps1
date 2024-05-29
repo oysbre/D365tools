@@ -496,12 +496,16 @@ Rename-D365ComputerName -NewName $newname -SSRSReportDatabase "DynamicsAxReportS
 }
 #End set servername from MS default
 
-#Create user provision shortcut to desktop
+#Create AdminUserprovision shortcut to Desktop
 if (!(test-path ("$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk"))){
 $WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk")
+$shortcutPath = "$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk"
+$Shortcut = $WshShell.CreateShortcut("$shortcutPath")
 $Shortcut.TargetPath = "C:\AOSService\PackagesLocalDirectory\bin\AdminUserProvisioning.exe"
 $Shortcut.Save()
+$bytes = [System.IO.File]::ReadAllBytes("$shortcutPath")
+$bytes[0x15] = $bytes[0x15] -bor 0x20 #set byte 21 (0x15) bit 6 (0x20) ON
+$bytes | Set-Content $shortcutPath -Encoding Byte
 }
 
 #Disable RealTime monitoring
