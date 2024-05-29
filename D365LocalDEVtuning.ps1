@@ -3,6 +3,7 @@
 -rename server, sqlserver and SSRS
 -set servicedrive to C: as an environmental path if not exists
 -set Dynamics Deployment folderpath in registry if not correct
+-include newer VS in TestStart script
 -set SNI client to trust server certficate
 -install NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
 -create AdminUserprovision shortcut to Desktop
@@ -53,6 +54,15 @@ if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
 	write-host "Env path for Servicedrive not found. Setting variable..." -foregroundcolor yellow
 	[System.Environment]::SetEnvironmentVariable('ServiceDrive','C:')
 }#end if servicedrive
+
+ #include VS2022 in TestStart
+ if (test-path "C:\DynamicsSDK\Test\TestStart.ps1"){
+    $vsold = '[xml]$vsInstances = & $vswherePath -format xml -version "[15.0, 17.0)"'
+    $vsnew = '[xml]$vsInstances = & $vswherePath -format xml -version "[15.0, 18.0)"'
+    $contentteststart = [System.IO.File]::ReadAllText("C:\DynamicsSDK\Test\TestStart.ps1").Replace($vsold,$vsnew)
+    [System.IO.File]::WriteAllText("C:\DynamicsSDK\Test\TestStart.ps1", $contentteststart)
+          
+}#end include VS2022 in TestStart
 
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
 #(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
