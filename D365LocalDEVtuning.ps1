@@ -41,9 +41,9 @@ Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
 #set Dynamics Deployment folderpath in registry
-if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Deployment"){
-	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Deployment" -foregroundcolor yellow
-	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Deployment" -Type String
+if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Logs"){
+	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Logs" -foregroundcolor yellow
+	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Logs" -Type String
 }
 
 #set servicedrive as an environmental path
