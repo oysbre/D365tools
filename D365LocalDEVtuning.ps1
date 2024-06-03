@@ -44,11 +44,19 @@ write-host "Set the password to never expire for user Administrator and current 
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "S-1-5-21-*-500" } | Set-LocalUser -PasswordNeverExpires 1
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
-#set Dynamics Deployment folderpath in registry
-if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne "C:\Logs"){
-	write-host "Changing Dynamicsdeplolyment folder path in registry to C:\Logs" -foregroundcolor yellow
-	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value "C:\Logs" -Type String
+#set Dynamics Deployment folderpath in registry and create folder structure
+$Installinfodir = "c:\Logs"
+Write-Host "Checking InstallationInfoDirectry in registry for path $($Installinfodir)..." -foregroundcolor Yellow
+if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name InstallationInfoDirectory -ea 0) -ne $Installinfodir){
+	write-host "Changing DynamicsDeployment folder path in registry to $($Installinfodir)..." -foregroundcolor yellow
+	Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -Name InstallationInfoDirectory -Value $Installinfodir -Type String
 }
+@('HotfixInstallationRecords', 'MetadataModelInstallationRecords', 'Runbooks', 'ServiceModelInstallationRecords') |
+    ForEach-Object {
+    	if (!(test-path (Join-Path "$Installinfodir\InstallationRecords\" $_))){
+        	New-Item (Join-Path "$Installinfodir\InstallationRecords\" $_) -ItemType Directory -force | out-null
+	 }
+    }
 
 #set ServiceDrive to C: as an environmental path if not set
 if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
