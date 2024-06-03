@@ -3,7 +3,7 @@ environ
 -never expire password for user
 -rename server, sqlserver and SSRS
 -set servicedrive to C: as an environmental path if not exists
--set Dynamics Deployment folderpath in registry if not correct
+-set Dynamics Deployment folderpath in registry if not correct and create folder structure
 -include newer VS in TestStart script
 -set SNI client to trust server certficate
 -install NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
