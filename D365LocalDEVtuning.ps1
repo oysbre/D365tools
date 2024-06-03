@@ -59,7 +59,7 @@ if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name In
     }
 
 #set ServiceDrive to C: as an environmental path if not set
-if (get-childitem -path env: | where  {$_.name -eq "servicedrive"} -eq $null){
+if ((get-childitem -path env: | where  {$_.name -eq "servicedrive"}) -eq $null){
 	write-host "Env path for Servicedrive not found. Setting variable..." -foregroundcolor yellow
 	[Environment]::SetEnvironmentVariable("ServiceDrive", "C:", "Machine")
 }#end if servicedrive
