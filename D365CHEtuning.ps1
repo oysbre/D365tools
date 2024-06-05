@@ -16,14 +16,13 @@ import-module sqlserver 3>&1 | out-null
 pop-location
 }#end function Import-Module-SQLServer
 
-if(get-module sqlserver){"yes"}else{"no"}
-Import-Module-SQLServer
- 
-if(get-module sqlserver){"yes"}else{"no"}
-Import-Module-SQLServer
+#remove SQLPS module from this session
+Remove-Module SQLPS -ea 0
 
-#(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
-Uninstall-Module -AllVersions SqlPs -ea 0
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
 
 #get SQL version and set parameter trustservercert
 $inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
