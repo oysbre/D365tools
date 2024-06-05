@@ -74,8 +74,7 @@ if ((get-childitem -path env: | where  {$_.name -eq "servicedrive"}) -eq $null){
 }#end include VS2022 in TestStart
 
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
-#(Get-Module -ListAvailable SqlPs).Path | Split-Path -Parent -ea 0 | Remove-Item -Recurse -Force -ea 0
-Uninstall-Module -AllVersions SqlPs -ea 0
+Remove-Module SQLPS -ea 0
 
 $inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
 foreach ($i in $inst)
