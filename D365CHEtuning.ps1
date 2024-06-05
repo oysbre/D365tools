@@ -119,7 +119,8 @@ else {
         if ($tagver){
             $fover = (get-installedmodule d365fo.tools).version.tostring()
             if ([System.Version]$tagver -gt [System.Version]$fover){
-             Update-Module -name d365fo.tools -Force
+             Write-host "Updating D365fo.tools..." -foregroundcolor yellow
+	     Update-Module -name d365fo.tools -Force
             }#end if gt version check
         }#end if tagver 
 }#end else
