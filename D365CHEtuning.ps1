@@ -114,7 +114,7 @@ if(-not (Get-Module d365fo.tools -ListAvailable)){
 }
 else {
     $releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
-    $tagver = ((Invoke-WebRequest $releases -ea 0 | ConvertFrom-Json)[0].tag_name).tostring()
+    $tagver = ((Invoke-WebRequest $releases -ea 0 -UseBasicParsing | ConvertFrom-Json)[0].tag_name).tostring()
         if ($tagver){
             $fover = (get-installedmodule d365fo.tools).version.tostring()
             if ([System.Version]$tagver -gt [System.Version]$fover){
