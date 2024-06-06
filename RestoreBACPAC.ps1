@@ -14,12 +14,13 @@ $URL = "<paste URL here>"
 $localfilename = "D:\temp\DEV.BACPAC"  # << full local filepath aka D:\temp\tempdev.bacpac
 
 #tablenames cleaned before restore av BACPAC. remove tablename in list if needed
-$commontablestoclear = '"SECURITYOBJECTHISTORY","*Staging*","BatchHistory","SYSDATABASELOG*","ReqCalcTaskTrace"'
-$customtablestoclear = '' #add custom tables to clear from bacpac
+#tablenames cleaned before restore av BACPAC. remove tablename in list if needed
+$commontablestoclear = @("SECURITYOBJECTHISTORY","*Staging*","dbo.BATCHHISTORY","BATCHJOBHISTORY","SYSDATABASELOG","ReqCalcTaskTrace")
+$customtablestoclear = @("LACARCHIVERESENDDATA","LACARCHIVEDATA","BISWSHISTORY","DTA_*","LACARCHIVEREF","BISMESSAGEHISTORYHEADER","BISHISTORYENTITY") #add custom tables to clear from bacpac
 
 
 #------------Region GLOBAL variables----------------------------------------------#
-$tablestoclear = $commontablestoclear +','+ $customtablestoclear
+$tablestoclear = $commontablestoclear + $customtablestoclear
 $newDBname = "importeddatabase_$((Get-Date).tostring("ddMMMyyyy"))" 
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
 $sqlbakPath =  split-path -parent $localfilename 
