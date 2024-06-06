@@ -151,7 +151,20 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 $StartServicesCmd = @'
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
-@("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {start-service -name "$_" }
+$servicelist=@("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")
+function startservices () {
+foreach ($service in $servicelist){
+    $serviceobject = get-service -name $service -ea 0
+    if ($serviceobject){
+        if ($serviceobject.StartType -ne 'Disabled'){
+            write-host "Starting service $($serviceobject.name)..." -ForegroundColor yellow
+            start-service $serviceobject 
+            $serviceobject.WaitForStatus("Running")
+        }#end if startType
+    }#end if $serviceobject
+}#end foreach service
+}#end function startservices
+startservices
 '@
 
 #Create powershellscripts on Desktop to start/stop services used before DB sync
