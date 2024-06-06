@@ -14,10 +14,8 @@ $URL = "<paste URL here>"
 $localfilename = "D:\temp\DEV.BACPAC"  # << full local filepath aka D:\temp\tempdev.bacpac
 
 #tablenames cleaned before restore av BACPAC. remove tablename in list if needed
-#tablenames cleaned before restore av BACPAC. remove tablename in list if needed
 $commontablestoclear = @("SECURITYOBJECTHISTORY","*Staging*","dbo.BATCHHISTORY","BATCHJOBHISTORY","SYSDATABASELOG","ReqCalcTaskTrace")
 $customtablestoclear = @("LACARCHIVERESENDDATA","LACARCHIVEDATA","BISWSHISTORY","DTA_*","LACARCHIVEREF","BISMESSAGEHISTORYHEADER","BISHISTORYENTITY") #add custom tables to clear from bacpac
-
 
 #------------Region GLOBAL variables----------------------------------------------#
 $tablestoclear = $commontablestoclear + $customtablestoclear
