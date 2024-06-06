@@ -367,10 +367,8 @@ If (Test-Path -Path "$env:ProgramData\Chocolatey") {
 }
 Else {
 
-    Write-Host "Installing Chocolatey"
-
+    Write-Host "Installing Chocolatey" -foregroundcolor yellow
     Set-ExecutionPolicy Bypass -Scope Process -Force; 
-      
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     #Determine choco executable location
@@ -400,11 +398,10 @@ Else {
 
         Write-Host "Installing $packageToInstall" -ForegroundColor Green
         & $chocoExePath "install" $packageToInstall "-y" "-r"
-    }
-}
-#end install choco packages
+    }#end foreach $packages
+}#end install choco packages
 
-Write-Host "Setting Management Reporter to manual startup to reduce churn and Event Log messages"
+Write-Host "Setting Management Reporter to manual startup to reduce churn and Event Log messages" -foregroundcolor yellow
 Get-D365Environment -FinancialReporter | Set-Service -StartupType Manual
 Stop-Service -Name MR2012ProcessService -Force
 Set-Service -Name MR2012ProcessService -StartupType Disabled
@@ -417,27 +414,27 @@ $instancesObject = $instproperty.psobject.properties | ?{$_.Value -like 'MSSQL*'
 $instances = $instancesObject.Value
 #add all the startup parameters
 if($instances) {
-foreach($instance in $instances) {
-$ins = $instance.split('.')[1]
-if($ins -eq "MSSQLSERVER") {$instanceName = $env:COMPUTERNAME }
-else{$instanceName = $env:COMPUTERNAME + "\" + $ins }
-$regKeyParam = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instance\MSSQLServer\Parameters"
-$property = (Get-ItemProperty $regKeyParam)
-$paramObjects = $property.psobject.properties | ?{$_.Name -like 'SQLArg*'}
-$count = ""
-$count = $paramObjects.count
-#get all the parameters
-$parameters = $StartupParametersPost2016.split(",")
-foreach($parameter in $parameters) {
-    if ($parameter -notin $paramObjects.value) {
-    Write-Host "Adding startup parameter SQLArg$count with value $parameter for $instanceName"
-    $newRegProp = "SQLArg"+$count
-    Set-ItemProperty -Path $regKeyParam -Name $newRegProp -Value $parameter
-    $count = $count + 1
-	Write-Host "Add sucessfully!"
-    } # end if $parameter exist
-}# end foreach $parameter
-}# end foreach $instance
+	foreach($instance in $instances) {
+		$ins = $instance.split('.')[1]
+		if($ins -eq "MSSQLSERVER") {$instanceName = $env:COMPUTERNAME }
+		else{$instanceName = $env:COMPUTERNAME + "\" + $ins }
+	$regKeyParam = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instance\MSSQLServer\Parameters"
+	$property = (Get-ItemProperty $regKeyParam)
+	$paramObjects = $property.psobject.properties | ?{$_.Name -like 'SQLArg*'}
+	$count = ""
+	$count = $paramObjects.count
+	#get all the parameters
+	$parameters = $StartupParametersPost2016.split(",")
+	foreach($parameter in $parameters) {
+    		if ($parameter -notin $paramObjects.value) {
+    			Write-Host "Adding startup parameter SQLArg$count with value $parameter for $instanceName"
+    			$newRegProp = "SQLArg"+$count
+    			Set-ItemProperty -Path $regKeyParam -Name $newRegProp -Value $parameter
+    			$count = $count + 1
+			Write-Host "Add sucessfully!"
+    		} # end if $parameter exist
+	}# end foreach $parameter
+	}# end foreach $instance
 }# end if $instances
 
 #Show Desktop icon all users
