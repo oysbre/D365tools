@@ -25,6 +25,21 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 
+#Install NuGet if not found
+Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+if ((get-packageprovider nuget) -eq $NULL){
+	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+}
+
+#Remove sqlps from PS session - obselete
+Remove-Module SQLPS -ea 0
+
+#Install PSmodule SQLSERVER
+if((Get-Module sqlserver -ListAvailable) -eq $null){
+    Write-host "Installing PS module sqlserver..." -foregroundcolor yellow
+    Install-Module sqlserver -Force -AllowClobber
+}
+
 function Import-Module-SQLServer {
 push-location
 import-module sqlserver 3>&1 | out-null
@@ -36,6 +51,25 @@ Import-Module-SQLServer
  
 if(get-module sqlserver){"yes"}else{"no"}
 Import-Module-SQLServer
+
+#Install/update d365tools
+write-host "Installing Powershell module D365FO.tools and set WinDefender rules..." -foregroundcolor Yellow
+if(-not (Get-Module d365fo.tools -ListAvailable)){
+    Write-host "Installing D365fo.tools..." -foregroundcolor yellow
+    Install-Module d365fo.tools -Force
+}
+else {
+    $releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
+    $tagver = ((Invoke-WebRequest $releases -ea 0 -UseBasicParsing | ConvertFrom-Json)[0].tag_name).tostring()
+        if ($tagver){
+            $fover = (get-installedmodule d365fo.tools).version.tostring()
+            if ([System.Version]$tagver -gt [System.Version]$fover){
+             Write-host "Updating D365fo.tools..." -foregroundcolor yellow
+             Update-Module -name d365fo.tools -Force
+            }#end if gt version check
+        }#end if tagver 
+}#end else
+
 CLS
 Write-host "Tuning local D365 environment. Please wait..." -foregroundcolor Cyan
 
@@ -74,8 +108,6 @@ if ((get-childitem -path env: | where  {$_.name -eq "servicedrive"}) -eq $null){
 }#end include VS2022 in TestStart
 
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
-Remove-Module SQLPS -ea 0
-
 $inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
 foreach ($i in $inst)
 {
@@ -86,12 +118,6 @@ $sqlver = $sqlver | sort desc
 if ($sqlver -ge 16){
 Set-ItemProperty -path "HKLM:\SOFTWARE\Microsoft\MSSQLServer\Client\SNI11.0\GeneralFlags\Flag2" -name value -value 1
 $trustservercert = 1
-}
-
-#Install NuGet
-Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-if ((get-packageprovider nuget) -eq $NULL){
-	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
 #Powershellscript variables.
@@ -225,9 +251,7 @@ iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DeployPackage.ps1" 
 write-host "Downloading DownloadWithAzcopy.ps1 script to download filles/packages from LCS fast" -foregroundcolor Yellow
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "c:\D365scripts\DownloadWithAzCopy.ps1"
 
-#Install d365tools and set WinDefender rules
-write-host "Installing Powershell module D365FO.tools and set WinDefender rules..." -foregroundcolor Yellow
-Install-Module -Name "d365fo.tools" -allowclobber
+#Set D365 Defender rules
 Add-D365WindowsDefenderRules
 
 #get the encrypted password for axdbadmin
