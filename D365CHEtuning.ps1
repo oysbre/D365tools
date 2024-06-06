@@ -8,16 +8,52 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 # Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
+CLS
+Write-host "This script runs several optimizationssettings for the CHE environment." -foregroundcolor Cyan
 
-#----functions -----------
+#Install Nuget,PowershellGet and D365fo.tools
+Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
+	Write-host "Installing NuGet..." -foregroundcolor yellow
+	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+}
+
+Import-PackageProvider -Name NuGet 
+if ((get-module -name PowerShellGet) -eq $null){
+	Write-host "Installing PowershellGet..." -foregroundcolor yellow
+	Install-Module -Name PowerShellGet -Force
+}
+
+#install/update d365fo.tools
+if(-not (Get-Module d365fo.tools -ListAvailable)){
+    Write-host "Installing D365fo.tools..." -foregroundcolor yellow
+    Install-Module d365fo.tools -Force
+}
+else {
+    $releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
+    $tagver = ((Invoke-WebRequest $releases -ea 0 -UseBasicParsing | ConvertFrom-Json)[0].tag_name).tostring()
+        if ($tagver){
+            $fover = (get-installedmodule d365fo.tools).version.tostring()
+            if ([System.Version]$tagver -gt [System.Version]$fover){
+             Write-host "Updating D365fo.tools..." -foregroundcolor yellow
+	     Update-Module -name d365fo.tools -Force
+            }#end if gt version check
+        }#end if tagver 
+}#end #install/update d365fo.tools
+
+if((Get-Module sqlserver -ListAvailable) -eq $null){
+    Write-host "Installing PS module sqlserver..." -foregroundcolor yellow
+    Install-Module sqlserver -Force -AllowClobber
+}
+
+#remove SQLPS module from this session - obselete
+Remove-Module SQLPS -ea 0
+
 function Import-Module-SQLServer {
 push-location
 import-module sqlserver 3>&1 | out-null
 pop-location
 }#end function Import-Module-SQLServer
-
-#remove SQLPS module from this session
-Remove-Module SQLPS -ea 0
 
 if(get-module sqlserver){"yes"}else{"no"}
 Import-Module-SQLServer
@@ -92,38 +128,6 @@ function Set-RegistryValueForAllUsers {
         Write-Warning -Message $_.Exception.Message 
     } 
 }#end function "Set-RegistryValueForAllUsers"
-CLS
-Write-host "This script runs several optimizationssettings for the CHE environment." -foregroundcolor Cyan
-
-#Install Nuget,PowershellGet and D365fo.tools
-Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
-	Write-host "Installing NuGet..." -foregroundcolor yellow
-	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-}
-Import-PackageProvider -Name NuGet 
-if ((get-module -name PowerShellGet) -eq $null){
-	Write-host "Installing PowershellGet..." -foregroundcolor yellow
-	Install-Module -Name PowerShellGet -Force
-}
-
-#install/update d365fo.tools
-if(-not (Get-Module d365fo.tools -ListAvailable)){
-    Write-host "Installing D365fo.tools..." -foregroundcolor yellow
-    Install-Module d365fo.tools -Force
-}
-else {
-    $releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
-    $tagver = ((Invoke-WebRequest $releases -ea 0 -UseBasicParsing | ConvertFrom-Json)[0].tag_name).tostring()
-        if ($tagver){
-            $fover = (get-installedmodule d365fo.tools).version.tostring()
-            if ([System.Version]$tagver -gt [System.Version]$fover){
-             Write-host "Updating D365fo.tools..." -foregroundcolor yellow
-	     Update-Module -name d365fo.tools -Force
-            }#end if gt version check
-        }#end if tagver 
-}#end else
-
 
 #Disable realtimemonitoring
 Set-MpPreference -DisableRealtimeMonitoring $true 
@@ -163,8 +167,8 @@ iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.
 $DownloadPath = "$env:temp"
 $vcurl = 'https://aka.ms/vs/17/release/VC_redist.x64.exe'
 $webclient = New-Object System.Net.WebClient
-$vcfilename  = [System.IO.Path]::GetFileName($vcurl)
-$vcfile      = "$DownloadPath\$vcfilename"
+$vcfilename = [System.IO.Path]::GetFileName($vcurl)
+$vcfile = "$DownloadPath\$vcfilename"
 $webclient.DownloadFile($vcurl, $vcfile)
 if (test-path $vcfile){
 $vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
@@ -202,35 +206,25 @@ if(!$webAppInit.Installed)
     Install-WindowsFeature $webAppInit -ErrorAction Stop
     Write-Host "`nInstalled $($webAppInit.DisplayName)`n" -ForegroundColor Green
 }
-else 
-{
-    Write-Host "$($webAppInit.DisplayName) was already installed" -ForegroundColor Yellow
-}
+else {  Write-Host "$($webAppInit.DisplayName) was already installed" -ForegroundColor Yellow }
 
 #Fetch the site
 $site = Get-Website -Name $siteName
-
-if(!$site)
-{
+if(!$site) {
     Write-Host "Site $siteName could not be found, exiting!" -ForegroundColor Yellow
     Break
 }
 
-
 #Fetch the application pool
 $appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
 #Set up AlwaysRunning
-if($appPool.startMode -ne "AlwaysRunning")
-{
+if($appPool.startMode -ne "AlwaysRunning") {
     Write-Host "startMode is set to $($appPool.startMode ), activating AlwaysRunning"
-    
     $appPool | Set-ItemProperty -name "startMode" -Value "AlwaysRunning"
     $appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
-
     Write-Host "startMode is now set to $($appPool.startMode)`n" -ForegroundColor Green
 } 
-else 
-{
+else {
     Write-Host "startMode was already set to $($appPool.startMode) for the application pool $($site.applicationPool)" -ForegroundColor Yellow
 }
 
@@ -244,7 +238,6 @@ else
 {
     Write-Host "preloadEnabled already active" -ForegroundColor Yellow
 }
-
 
 #add SQL service account to Perform volume maint task to speedup database expansion and restore of BAK files
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
