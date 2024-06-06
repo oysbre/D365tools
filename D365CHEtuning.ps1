@@ -9,7 +9,7 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
 CLS
-Write-host "This script runs several optimizationssettings for the CHE environment." -foregroundcolor Cyan
+Write-host "This script runs several optimization settings for the CHE environment." -foregroundcolor Cyan
 
 #Install Nuget,PowershellGet and D365fo.tools
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
