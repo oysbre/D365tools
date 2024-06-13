@@ -187,8 +187,8 @@ if (test-path $vcfile){
 $vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
 $vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
     
-    if (($vcdlver -notmatch $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
-       write-host "Installing MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
+    if (($vcdlver -gt $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
+       write-host "Installing/updating MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
        $vcargs = "/install /passive /norestart"
         Start-Process $vcfile -Wait -ArgumentList $vcargs
         remove-item $vcfile -force
