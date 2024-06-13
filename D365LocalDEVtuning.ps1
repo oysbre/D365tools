@@ -159,9 +159,9 @@ $daysleft = (new-timespan -start $todaydate -end $licenseExprDate).days
 if ($daysleft -lt 1 -and $rearmCount -ne 0) {write-host "Re-arming license";cscript c:\windows\system32\slmgr.vbs /rearm;restart-computer }
 elseif ($rearmCount -eq 0 -and $daysleft -lt 5){
 $ButtonType = [System.Windows.Forms.MessageBoxButtons]::OK
-$MessageIcon = [System.Windows.Forms.MessageBoxIcon]::Information
-$MessageBody = "No re-arm left. Create new DEV box. License expire in $($daysleft) days."
-$MessageTitle = "Re-arm"
+$MessageIcon = [System.Windows.Forms.MessageBoxIcon]::Warning
+$MessageBody = "No re-arms left. Create new DEV box. License expires in $($daysleft) days."
+$MessageTitle = "Re-arm license"
 $Result = [System.Windows.Forms.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
 }
 '@
