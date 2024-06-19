@@ -45,6 +45,7 @@ if ($azcopyupdate){
 $statuscode = Get-UrlStatusCode -urlcheck $URL
 if ($statuscode -eq 200){
  azcopy copy $URL $localfilename
+ unblock-file $localfilename
 }
 else {write-host "Error in URL $($url ): " $($statuscode)}
 pause
