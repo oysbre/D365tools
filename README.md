@@ -14,6 +14,7 @@ iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -o
 - Enables Traceflag 7412 in SQL instance to see live execution plans in SSMS
 - Set timezone to CET
 - Use IIS instead of IIS Express
+- Enable IIS Application Initialization and optimize appools
 - Show computericon on Desktop with servername
 
 'D365LocalDEVtuning.ps1' is used post-creation of Local D365 DEV environment to tune performance and rename the server.
