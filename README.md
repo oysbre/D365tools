@@ -1,5 +1,5 @@
 # D365tools
-'D365CHEtuning.ps1' is used post-creation of CloudHosted D365 DEV servers to tune the performance and add some tools.<br> Open Powershell and copy paste command to download script to Desktop<br>
+'D365CHEtuning.ps1' is used post-creation of CloudHosted D365 DEV servers to tune the performance and add some tools.<br> Open Powershell, copy&paste command and execute to download powershellscript to Desktop<br>
 ```programming
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1"
 ```
