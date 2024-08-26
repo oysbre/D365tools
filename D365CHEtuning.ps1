@@ -11,18 +11,19 @@ $ProgressPreference = 'SilentlyContinue'
 CLS
 Write-host "This script runs several optimization settings for the CHE environment." -foregroundcolor Cyan
 
-#Install Nuget,PowershellGet and D365fo.tools
+#Install PowershellGet,Nuget and D365fo.tools
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+if ((get-module -name PowerShellGet) -eq $null){
+	Write-host "Installing PowershellGet..." -foregroundcolor yellow
+	Install-Module -Name PowerShellGet -Force
+}
 If (((Get-PackageProvider -listavailable).name).contains("NuGet") -eq $false){
 	Write-host "Installing NuGet..." -foregroundcolor yellow
 	Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
 Import-PackageProvider -Name NuGet 
-if ((get-module -name PowerShellGet) -eq $null){
-	Write-host "Installing PowershellGet..." -foregroundcolor yellow
-	Install-Module -Name PowerShellGet -Force
-}
+
 
 #install/update d365fo.tools
 if(-not (Get-Module d365fo.tools -ListAvailable)){
