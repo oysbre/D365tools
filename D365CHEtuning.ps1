@@ -3,7 +3,17 @@
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
- 
+#enable execution of scripts
+# Set variables to indicate value and key to set
+$PSRegistryPath = 'HKLM:\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell'
+$Name         = 'ExecutionPolicy'
+$Value        = 'Unrestricted'
+# Create the key if it does not exist
+If (-NOT (Test-Path $PSRegistryPath)) {
+  New-Item -Path $PSRegistryPath -Force | Out-Null
+}  
+# Now set the value
+New-ItemProperty -Path $PSRegistryPath -Name $Name -Value $Value -PropertyType String -Force
 
 # Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
