@@ -142,12 +142,16 @@ function Set-RegistryValueForAllUsers {
 }#end function "Set-RegistryValueForAllUsers"
 
 #Disable realtimemonitoring
-Set-MpPreference -DisableRealtimeMonitoring $true 
+#Set-MpPreference -DisableRealtimeMonitoring $true 
 #region Install tools
 #Add-D365WindowsDefenderRules
 Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
 #endregion
+
+#Enable Ciphersuites for Windows Update
+Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256
 
 #Herestrings for Powershellscripts
 $unsetcmd = @'
