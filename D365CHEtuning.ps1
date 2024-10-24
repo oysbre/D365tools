@@ -323,8 +323,8 @@ SeManageVolumePrivilege = $($currentSetting)
 "@
 $tmp2 = ""
 $tmp2 = [System.IO.Path]::GetTempFileName()
-Write-Host "Import new settings to Local Security Policy" -ForegroundColor Yellow
-$outfile | Set-Content -Path $tmp2 -Encoding Unicode -Force
+# Write-Host "Import new settings to Local Security Policy" -ForegroundColor Yellow
+# $outfile | Set-Content -Path $tmp2 -Encoding Unicode -Force
 Push-Location (Split-Path $tmp2)
        
        try {
@@ -418,7 +418,6 @@ Else {
     )
 
     $packages = @(
-        "googlechrome"
         "notepadplusplus.install"
 	"7zip.install"
     )
@@ -432,9 +431,9 @@ Else {
 }#end install choco packages
 
 Write-Host "Setting Management Reporter to manual startup to reduce churn and Event Log messages" -foregroundcolor yellow
-Get-D365Environment -FinancialReporter | Set-Service -StartupType Manual
-Stop-Service -Name MR2012ProcessService -Force
-Set-Service -Name MR2012ProcessService -StartupType Disabled
+#Get-D365Environment -FinancialReporter | Set-Service -StartupType Manual
+#Stop-Service -Name MR2012ProcessService -Force
+#Set-Service -Name MR2012ProcessService -StartupType Disabled
 
 #Enable TraceFlags on SQL instances
 $StartupParametersPost2016 = @("-T7412")
