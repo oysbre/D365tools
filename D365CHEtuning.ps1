@@ -152,6 +152,7 @@ Invoke-D365InstallSqlPackage
 #Enable Ciphersuites for Windows Update
 Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
 Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /f /v WinREVersion /t REG_SZ /d "10.0.20348.2201"
 
 #Herestrings for Powershellscripts
 $unsetcmd = @'
