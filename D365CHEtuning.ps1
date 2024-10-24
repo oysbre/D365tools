@@ -466,7 +466,7 @@ if($instances) {
 	}# end foreach $parameter
 	}# end foreach $instance
 }# end if $instances
-
+<#
 #Show Desktop icon all users
 Set-RegistryValueForAllUsers -RegistryInstance @{'Name' = '{20D04FE0-3AEA-1069-A2D8-08002B30309D}';`
  'Type' = 'Dword'; 'Value' = '0'; 'Path' = 'Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel'} 
@@ -474,6 +474,7 @@ $My_Computer = 17
 $Shell = new-object -comobject shell.application
 $NSComputer = $Shell.Namespace($My_Computer)
 $NSComputer.self.name = $env:COMPUTERNAME
+#>
 write-host "Tuning of $($env:COMPUTERNAME) done. Press any key to exit." -ForegroundColor green
 write-host "Restart server to enable every optimization. Enjoy!" -ForegroundColor green
 Pause
