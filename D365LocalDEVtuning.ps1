@@ -1,5 +1,5 @@
-environ
-<# Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
+<# 
+Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
 -never expire password for user
 -rename server, sqlserver and SSRS
 -set servicedrive to C: as an environmental path if not exists
