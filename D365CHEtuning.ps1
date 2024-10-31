@@ -149,6 +149,30 @@ Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
 #endregion
 
+#set timezone based on IP address (estimated)
+Write-host "Set timezone based on IP location (estimated)..." -foregroundcolor Yellow
+[string]$IPAddress = (Invoke-WebRequest -Uri 'https://ifconfig.me/ip' -ContentType 'text/plain' -UseBasicParsing -ea 0).Content.Trim()
+if ($IPaddress){ 
+    [string]$IANATimeZone = (Invoke-RestMethod -Method Get -Uri "http://ip-api.com/json/$IPAddress" -UseBasicParsing -ea 0).timezone
+    if ($IANATimeZone){
+        try {
+            $zonesurl = 'https://raw.githubusercontent.com/unicode-org/cldr/master/common/supplemental/windowsZones.xml'
+            [xml]$xml = (Invoke-WebRequest -Uri $zonesurl -ContentType 'application/xml' -UseBasicParsing).Content
+        }
+        catch {
+            throw "Failed to obtain time zone XML map from GitHub: $_"
+        }
+
+        $zones = $xml.supplementalData.windowsZones.mapTimezones.mapZone
+        $win_tz = ($zones | Where-Object type -Match $IANATimeZone).other
+        if ($win_tz){
+            write-host "Settig timezone to $($win_tz)..." -ForegroundColor yellow
+            set-timezone -name $win_tz
+        }
+        else {write-host "Couldn't convert IANA timezone to Windows format" -ForegroundColor red }
+    }#end iana
+}#end $ipaddress
+
 #Enable Ciphersuites for Windows Update
 Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
 Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256
