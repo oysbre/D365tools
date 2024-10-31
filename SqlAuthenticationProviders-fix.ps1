@@ -12,7 +12,7 @@ if (test-path $webconf) {
             $newnode.SetAttribute("name","SqlAuthenticationProviders")
             $newnode.SetAttribute("type","System.Data.SqlClient.SqlAuthenticationProviderConfigurationSection, System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")
             $xmlfile.configuration.configSections.AppendChild($newnode)| out-null
-            #Save the file
+            #Backup web.config file and save the changes
             copy-item $fileattrib.fullname "$($fileattrib.DirectoryName)\$($fileattrib.basename)-$(get-date -f yyyyMMdd)$($fileattrib.extension)"
             $xmlfile.Save($webconf)
     }#end xmlfile node check
