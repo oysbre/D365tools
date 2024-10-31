@@ -545,7 +545,7 @@ if (!(test-path ("$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk"))){
 $WshShell = New-Object -comObject WScript.Shell
 $shortcutPath = "$env:USERPROFILE\Desktop\AdminUserProvisioning.lnk"
 $Shortcut = $WshShell.CreateShortcut("$shortcutPath")
-$Shortcut.TargetPath = "C:\AOSService\PackagesLocalDirectory\bin\AdminUserProvisioning.exe"
+$Shortcut.TargetPath = "$env:servicedrive:\AOSService\PackagesLocalDirectory\bin\AdminUserProvisioning.exe"
 $Shortcut.Save()
 $bytes = [System.IO.File]::ReadAllBytes("$shortcutPath")
 $bytes[0x15] = $bytes[0x15] -bor 0x20 #set byte 21 (0x15) bit 6 (0x20) ON
