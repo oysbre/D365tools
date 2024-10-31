@@ -12,7 +12,7 @@ iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -o
 - Sets Powerplan to "High performance"
 - Grant the SQL serviceaccount "Perform Volume Maintenance Task" rights to speedup restore/expanding datadisk
 - Enables Traceflag 7412 in SQL instance to see live execution plans in SSMS
-- Set timezone to CET
+- Set timezone based on IP location
 - Use IIS instead of IIS Express
 - Enable IIS Application Initialization and optimize appools
 - Show computericon on Desktop with servername
