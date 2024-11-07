@@ -144,7 +144,9 @@ function Set-RegistryValueForAllUsers {
 #Disable realtimemonitoring
 #Set-MpPreference -DisableRealtimeMonitoring $true 
 #region Install tools
-#Add-D365WindowsDefenderRules
+if ($env:computername -notlike "*FOCO*"){
+Add-D365WindowsDefenderRules
+}
 Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
 #endregion
