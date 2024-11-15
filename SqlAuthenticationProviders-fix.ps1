@@ -3,7 +3,7 @@ Issue 964534 CHE update failed on 10.0.41 for step 38 GlobalUpdate script for se
 #>
 $webconf = "$env:servicedrive\MROneBox\MRInstallDirectory\Server\ApplicationService\web.config"
 if (test-path $webconf) {
-    Write-Host "Checking $($webconf) for missing SqlAuthenticationProviders"
+    Write-Host "Checking $($webconf) for missing node 'SqlAuthenticationProviders'..." -foregroundcolor Yellow
     [xml]$xmlfile = Get-Content $webconf
     $fileattrib = get-childitem $webconf 
         if (-not($xmlfile.configuration.configSections.section | Where-Object { $_.name -eq 'SqlAuthenticationProviders' })){
