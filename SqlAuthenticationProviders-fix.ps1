@@ -1,5 +1,5 @@
 <#
-Issue 964534 CHE update failed on 10.0.41 for step 38 GlobalUpdate script for service model: MROneBox
+Issue 964534 CHE update failed on step 38 GlobalUpdate script for service model: MROneBox
 Copy the Powershell command below and run it in a Powershell console on the CHE devbox to download script to Desktop
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/SqlAuthenticationProviders-fix.ps1 -outfile "$env:USERPROFILE\Desktop\SqlAuthenticationProviders-fix.ps1"
 #>
