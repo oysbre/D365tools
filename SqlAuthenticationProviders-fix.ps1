@@ -24,3 +24,4 @@ if (test-path $webconf) {
             $xmlfile.Save($webconf)
     }#end xmlfile node check
 }#end test-path
+else {Write-Host "Can't locate $($webconf). Check path and try again" -foregroundcolor Cyan }
