@@ -1,6 +1,12 @@
 <#
 Issue 964534 CHE update failed on 10.0.41 for step 38 GlobalUpdate script for service model: MROneBox
+Copy the Powershell command below and run it in a Powershell console on the CHE devbox to download script to Desktop
+iwr https://raw.githubusercontent.com/oysbre/D365tools/main/SqlAuthenticationProviders-fix.ps1 -outfile "$env:USERPROFILE\Desktop\SqlAuthenticationProviders-fix.ps1"
 #>
+
+#Check if PS Console is running as "elevated" aka Administrator mode
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 $webconf = "$env:servicedrive\MROneBox\MRInstallDirectory\Server\ApplicationService\web.config"
 if (test-path $webconf) {
     Write-Host "Checking $($webconf) for missing node 'SqlAuthenticationProviders' and add it if not found." -foregroundcolor Yellow
