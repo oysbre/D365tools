@@ -2,18 +2,20 @@
 Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
 -never expire password for user
 -rename server, sqlserver and SSRS
+-install/update Visual C++ 2022 redist install/update
 -set servicedrive to C: as an environmental path if not exists
 -set Dynamics Deployment folderpath in registry if not correct and create folder structure
 -include newer VS in TestStart script
 -set SNI client to trust server certficate
--install NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
+-install/update NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
+-add Powershellscript to Desktop for stop and start D365 related services
 -create AdminUserprovision shortcut to Desktop
 -enable IIS App init and pre-load to initialize AOS faster  and set application pool to always running, disable timeout.
--create and setup re-arm script and schedule during logon
--optimize SQL startup parameter traceflags
--grant SQL serviceaccount 'Perform Volume Maintenance Task' privelege
+-create and setup "re-arm" script and taskschedule to check during logon
+-enable TraceFlags 7412 on SQL startupparameter to enable "live execution plan" - for troubleshooting slow SQL queries
+-grant SQL serviceaccount 'Perform Volume Maintenance Task' privilege; faster backup/restore and diskexpand.
 -set powerplan til HIGH PERFORMANCE
--set server timezone based on IP location
+-set timezone based on IP location 
 -checks SQL version for trustservercertificate
 #>
 
@@ -107,6 +109,27 @@ if ((get-childitem -path env: | where  {$_.name -eq "servicedrive"}) -eq $null){
           
 }#end include VS2022 in TestStart
 
+# MS Visual C++ 2022 redist install/update
+$DownloadPath = "$env:temp"
+$vcurl = 'https://aka.ms/vs/17/release/VC_redist.x64.exe'
+$webclient = New-Object System.Net.WebClient
+$vcfilename = [System.IO.Path]::GetFileName($vcurl)
+$vcfile = "$DownloadPath\$vcfilename"
+$webclient.DownloadFile($vcurl, $vcfile)
+if (test-path $vcfile){
+$vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
+$vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
+    
+    if (($vcdlver -gt $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
+       write-host "Installing/updating MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
+       $vcargs = "/install /passive /norestart"
+        Start-Process $vcfile -Wait -ArgumentList $vcargs
+        remove-item $vcfile -force
+    }#end if ver check
+
+}#end if VcDlfile check
+else {write-host "MS Visual C++ download not found in $($DownloadPath). Newer ServiceUpdates deploy may fail." -ForegroundColor red;}
+
 #Get SQL version and set trustservercertificate parameter for queries and SNI client
 $inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
 foreach ($i in $inst)
@@ -157,7 +180,7 @@ $slmgrXprResult = cscript c:\windows\system32\slmgr.vbs /xpr
 $licenseExprDate = [datetime]$LicenseStatus.Remove(0,36).trim()
 $todaydate = get-date
 $daysleft = (new-timespan -start $todaydate -end $licenseExprDate).days
-if ($daysleft -lt 1 -and $rearmCount -ne 0) {write-host "Re-arming license";cscript c:\windows\system32\slmgr.vbs /rearm;restart-computer }
+if ($daysleft -lt 1 -and $rearmCount -ne 0) {cscript c:\windows\system32\slmgr.vbs /rearm;restart-computer }
 elseif ($rearmCount -eq 0 -and $daysleft -lt 5){
 $ButtonType = [System.Windows.Forms.MessageBoxButtons]::OK
 $MessageIcon = [System.Windows.Forms.MessageBoxIcon]::Warning
