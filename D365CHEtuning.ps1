@@ -478,6 +478,7 @@ Else {
     $packages = @(
         "notepadplusplus.install"
 	"7zip.install"
+ 	"agentransack"
     )
 
     # Install each program
