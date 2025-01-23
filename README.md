@@ -3,7 +3,7 @@
 ```programming
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1"
 ```
-- Installs latest SSMS, EDGE if needed, 7Zip, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
+- Installs latest SSMS, AgentRansack, 7Zip, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
 - Installs/update Visual C++ redist needed for 10.0.36 and up
 - Add powershellscript "DownloadWithAzCopy.ps1" to Desktop to download files from LCS fast
 - Add powershellscripts to Desktop to Start & Stop D365 dependent services
