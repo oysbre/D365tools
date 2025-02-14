@@ -1,3 +1,4 @@
+#To download, run Powershell command below
 #iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1"
 
 #Check if PS Console is running as "elevated" aka Administrator mode
