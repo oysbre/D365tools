@@ -1,4 +1,4 @@
-#Migrate VM loadbalancer from Basic to Standard
+#Migrate VM loadbalancer SKU from Basic to Standard
 #https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell
 
 #Force Powershell to run as admin
