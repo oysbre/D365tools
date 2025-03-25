@@ -43,6 +43,7 @@ $vms = get-azvm
 
 if ($vms -is [array]){
     foreach ($vm in $vms){
+        $resourceGroupName = ""
         $resourceGroupName = $($vm.resourcegroupname)
         #Check Loadbalancer SKU of the VM is Basic or not.
         if ((get-azloadbalancer -resourcegroupname $resourceGroupName).Sku.Name -eq "Basic"){
