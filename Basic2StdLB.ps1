@@ -21,7 +21,7 @@ $outboundRuleName= "http-outbound-rule"
 #Import-Module az
 $SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
 $pscredential = New-Object -TypeName System.Management.Automation.PSCredential @($appId, $SecureStringPwd)
-write-host "Connect to Azure with Serviceprincipal or regular user? S/R" -foregroundcolor Yellow ;$readansazure=read-host
+write-host "Connect to Azure with Serviceprincipal or Regular EntraID user? S/R" -foregroundcolor Yellow ;$readansazure=read-host
 if ($readansazure -eq "S"){
 Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $tenantid -Subscription $subscription # -debug
 }
@@ -30,7 +30,7 @@ Connect-AzAccount -Tenant $tenantid -Subscription $subscription # -debug
 }
 else {write-host "Choose R or S as valid input. Run script again." -foregroundcolor RED;pause;exit}
 
-#Create logdir
+#Create logdir for migration
 $LBlog = "c:\LBlog"
 if (-not(test-path $LBlog)){
     new-item $LBlog -ItemType Directory | out-null
@@ -43,10 +43,11 @@ $vms = get-azvm
 if ($vms -is [array]){
     foreach ($vm in $vms){
         $resourceGroupName = $($vm.resourcegroupname)
+        #Check Loadbalancer SKU of the VM is Basic or not.
         if ((get-azloadbalancer -resourcegroupname $resourceGroupName).Sku.Name -eq "Basic"){
         
             #Migrate Basic to Standard IP
-            write-host "Upgradering LB SKU til Standard for VM $($vm.name)" -ForegroundColor yellow
+            write-host "Migrating LB SKU to Standard for VM $($vm.name)..." -ForegroundColor yellow
             $loadBalancerName = (get-azloadbalancer -resourcegroupname $($vm.resourcegroupname)).Name
             Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $resourceGroupName -BasicLoadBalancerName $loadBalancerName -FollowLog -RecoveryBackupPath $LBlog -skipDowntimeWarning
             
