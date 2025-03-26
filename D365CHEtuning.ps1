@@ -237,6 +237,8 @@ foreach ($service in $servicelist){
 }#end foreach service
 }#end function startservices
 startservices
+Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
+Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
 '@
 
 #Create powershellscripts on Desktop to start/stop services used before DB sync
