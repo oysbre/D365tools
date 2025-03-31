@@ -109,7 +109,7 @@ if(get-module sqlps){"yes"}else{"no"}
 
 
 cls
-if ($URL -eq "<paste URL here>"){write-host "Set SASURL from LCS in variable '$URL' and try again." -foregroundcolor yellow;pause;exit}
+if ($URL -eq "<SASURL>"){write-host "Set SASURL from LCS in variable '$URL' and try again." -foregroundcolor yellow;pause;exit}
 if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
 
 
