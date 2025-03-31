@@ -1,4 +1,3 @@
-#Powershellscript to download BAK/BACPAC from LCS and restore it as "AXDB" in Cloudhosted environments
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
@@ -7,21 +6,29 @@ Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
 break
 }
 
-
 #------------Region DEV variables----------------------------------------------#
-# vvvv In LCS, checkmark the databasename left of the name and then click "Generate SAS link" vvv. Paste the SASURL in variable $URl below.
-$URL = "<paste URL here>"  
-$localfilename = "D:\temp\DEV.BACPAC"  # << full local filepath aka D:\temp\tempdev.bacpac
+# In LCS>Asset library>Database backup, mark the database for download to the left of the name and then click "Generate SAS link". 
+# Paste the SAS URL in variable $URL below:
 
-#tablenames cleaned before restore av BACPAC. remove tablename in list if needed
-$commontablestoclear = @("SECURITYOBJECTHISTORY","*Staging*","dbo.BATCHHISTORY","BATCHJOBHISTORY","SYSDATABASELOG","ReqCalcTaskTrace")
-$customtablestoclear = @("LACARCHIVERESENDDATA","LACARCHIVEDATA","BISWSHISTORY","DTA_*","LACARCHIVEREF","BISMESSAGEHISTORYHEADER","BISHISTORYENTITY") #add custom tables to clear from bacpac
+$URL = "<SASURL>"
+
+$localdir = "d:\"
+if ($localdir -notmatch '\\$')
+{
+$localdir += '\'
+}
+
+$localfilename = $localdir + "sandboxbackup.bacpac"  # << full local filepath aka D:\tempdev.bacpac
+
 
 #------------Region GLOBAL variables----------------------------------------------#
-$tablestoclear = $commontablestoclear + $customtablestoclear
+$bacpacFileNameAndPath = $localfilename
+# Will be created by script. Existing files will be overwritten.
+$modelFilePath = $localdir+"BacpacModel.xml" 
+$modelFileUpdatedPath = $localdir +"UpdatedBacpacModel.xml"
 $newDBname = "importeddatabase_$((Get-Date).tostring("ddMMMyyyy"))" 
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
-$sqlbakPath =  split-path -parent $localfilename 
+$sqlbakPath = $localfilename
 #--------------------
 
 function Get-UrlStatusCode([string] $Urlcheck) {
@@ -57,34 +64,23 @@ foreach ($service in $servicelist){
 }#end function startservices
 
 
-#Set PSGallery as trusted repo
+
+function Import-Module-SQLPS {
+    #pushd and popd to avoid import from changing the current directory (ref: http://stackoverflow.com/questions/12915299/sql-server-2012-sqlps-module-changing-current-location-automatically)
+    #3>&1 puts warning stream to standard output stream (see https://connect.microsoft.com/PowerShell/feedback/details/297055/capture-warning-verbose-debug-and-host-output-via-alternate-streams)
+    #out-null blocks that output, so we don't see the annoying warnings described here: https://www.codykonior.com/2015/05/30/whats-wrong-with-sqlps/
+    push-location
+    import-module sqlps 3>&1 | out-null
+    pop-location
+}
+
+# BEGIN
+write-host 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
+write-host "Installing NuGet..." -ForegroundColor yellow
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
-
-#stop using powershellmodule SQLPS in this session - outdated
-Remove-Module SQLPS -ea 0
-
-#install module sqlserver to use "new" invoke-sqlcmd
-if((Get-Module sqlserver -ListAvailable) -eq $null){
-    Write-host "Installing PS module sqlserver..." -foregroundcolor yellow
-    Install-Module sqlserver -Force -AllowClobber
-}
-
-function Import-Module-SQLServer {
-push-location
-import-module sqlserver 3>&1 | out-null
-pop-location
-}#end function Import-Module-SQLServer
-
-if(get-module sqlserver){"yes"}else{"no"}
-Import-Module-SQLServer
- 
-if(get-module sqlserver){"yes"}else{"no"}
-Import-Module-SQLServer
-
-
 
 #install/update d365fo.tools
 if(-not (Get-Module d365fo.tools -ListAvailable)){
@@ -93,40 +89,29 @@ if(-not (Get-Module d365fo.tools -ListAvailable)){
 }
 else {
     $releases = "https://api.github.com/repos/d365collaborative/d365fo.tools/releases"
+    if ((Get-UrlStatusCode -Urlcheck $releases) -eq 200 ){
     $tagver = ((Invoke-WebRequest $releases -ea 0 -UseBasicParsing | ConvertFrom-Json)[0].tag_name).tostring()
         if ($tagver){
             $fover = (get-installedmodule d365fo.tools).version.tostring()
             if ([System.Version]$tagver -gt [System.Version]$fover){
              Write-host "Updating D365fo.tools..." -foregroundcolor yellow
-             Update-Module -name d365fo.tools -Force
+	     Update-Module -name d365fo.tools -Force
             }#end if gt version check
         }#end if tagver 
-}#end else
+    }
+    else {write-host "Can't connect to github to fetch D365fo.tools" -ForegroundColor CYAN }
+}#end #install/update d365fo.tools
 
+if(get-module sqlps){"yes"}else{"no"}
+Import-Module-SQLPS
 
-#get SQL version and set parameter trustservercert
-$inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
-foreach ($i in $inst)
-{
-   $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i
-   $sqlver += (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").Version
-}
-$sqlver = $sqlver | sort desc
-if ($sqlver -ge 16){
-$trustservercert = 1
-}
+if(get-module sqlps){"yes"}else{"no"}
+
 
 cls
 if ($URL -eq "<paste URL here>"){write-host "Set SASURL from LCS in variable '$URL' and try again." -foregroundcolor yellow;pause;exit}
 if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
-write-host "Using variables: " -ForegroundColor Magenta
-write-host "URL: $($URL)"
-write-host "NewDBname: $($newDBname)"
-write-host "Localfilename: $($localfilename)"
-write-host "TablesToClear: $($tablestoclear)"
-write-host ""
-write-host "This script will now restore BACPAC, switch the existing AXDB and quit VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
-if ($goaheadans -eq 'y'){
+
 
 #Install/update AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
@@ -152,22 +137,83 @@ if ($azcopyupdate){
     remove-item $env:temp\AzCopy -force -Recurse
     }
 }#end AzCopy 
+ 
+CLS
+write-host "This script will restore BACPAC, switch the existing AXDB and quit VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
+if ($goaheadans -eq 'y'){
 
-#download from SASURL2Local
+#download from URL2Local
 $statuscode = Get-UrlStatusCode -urlcheck $URL
 if ($statuscode -eq 200){
-    write-host "Downloading file from LCS to $($localfilename)..." -ForegroundColor yellow
-    azcopy copy $URL $localfilename
-}
-else {write-host "Error in URL $($url ): " $($statuscode);pause;exit}
+    #check if we got bacpac already
+    if (!(test-path $localfilename)){
+        write-host "Downloading $($localfilename) from LCS..." -ForegroundColor yellow
+        azcopy copy $URL $localfilename
+        unblock-file $localfilename
+
+    }
+    else {
+        write-host "Already found bacpac $($localfilename). To  use this BACPAC, press Enter. Overwrite existing file with new database? Press letter D" -ForegroundColor Cyan;
+        $bacpacans=read-host
+        if ($bacpacans -eq "D"){
+            remove-item $localfilename -force -ea 0
+            write-host "Downloading BACPAC to $($localfilename) from LCS..." -ForegroundColor yellow
+            azcopy copy $URL $localfilename
+            unblock-file $localfilename 
+
+        }#end if delete existing file
+    }#end else
+}#end if statuscode check
+else {write-host "Error in URL $($url ): " $($statuscode) -ForegroundColor RED;pause;exit}
+
+#stop services before restore
+stopservices
 
 #Check for BACPAC
-$Latest = Get-ChildItem -Path $sqlbakPath -ea 0 -filter "*.bacpac" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$Latest = Get-ChildItem -Path $sqlbakPath -ea 0| Where-Object {$_.name -like "*.bacpac"} | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 #check if we got a BACPAC
 if ($Latest){
 $RestoreFile = $Latest.Name
 write-host "Using BACPAC file $($RestoreFile)." -ForegroundColor yellow
+
+#drop AXDB
+#query check if new AXDB_org exists
+$sqlDropAXDB_orgQ= @"
+IF DB_ID('AXDB_org') IS NOT NULL
+BEGIN
+ALTER DATABASE [AXDB_org] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+WAITFOR DELAY '00:00:03';
+ALTER DATABASE [AXDB_org] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+WAITFOR DELAY '00:00:03';
+DROP DATABASE axdb_org;
+END
+"@
+write-host "Dropping AXDB_org if exists..." -ForegroundColor yellow
+$dbcheckpre = Invoke-SqlCmd -Query $sqlDropAXDB_orgQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90
+
+#query check if new AXDB_org exists
+$sqlDropAXDBQ= @"
+IF DB_ID('AXDB') IS NOT NULL
+BEGIN
+ALTER DATABASE [AXDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+WAITFOR DELAY '00:00:04';
+ALTER DATABASE [AXDB] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+WAITFOR DELAY '00:00:04';
+DROP DATABASE axdb;
+WAITFOR DELAY '00:00:03';
+END
+"@
+write-host "Dropping AXDB if exists..." -ForegroundColor yellow
+$dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDBQ -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 90
+
+#fix model.xml for unsupported features in SQL 2019 vs Azure SQL
+Write-host "Exporting BACPAC Modelfile..." -ForegroundColor yellow
+Export-D365BacpacModelFile -Path $bacpacFileNameAndPath -OutputPath $modelFilePath -Force -Verbose
+Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs local SQL version..." -ForegroundColor yellow
+Repair-D365BacpacModelFile -path $modelFilePath -Force
+#>
+
 
 #get latest SQLPACKAGE
 $bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe -EA 0 -Force | sort lastwritetime | select -last 1 -expandproperty directoryname
@@ -178,15 +224,17 @@ If ($bacpacexepath -eq $null){
     $request = Invoke-WebRequest -Uri $uri -MaximumRedirection 2 -ErrorAction 0 -OutFile $env:temp\sqlpackagecore.zip
     unblock-file $env:temp\sqlpackagecore.zip
     Expand-Archive $env:temp\sqlpackagecore.zip  c:\sqlpackagecore  -Force
-    remove-item $env:temp\sqlpackagecore.zip -force -ea 0
+    remove-item $env:temp\sqlpackagecore.zip -force
     $bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe -EA 0 -Force | sort lastwritetime | select -last 1 -expandproperty directoryname
 }
-write-host 'Truncating tables from variable $tablestoclear in BACPAC before restore/import ...' -ForegroundColor Yellow
-Clear-D365BacpacTableData -Path "$sqlbakPath\$RestoreFile" -TableName $tablestoclear -ClearFromSource -ErrorAction SilentlyContinue
-write-host ""
+
+write-host "Truncating tables in BACPAC before restore/import..." -ForegroundColor Yellow
+Clear-D365TableDataFromBacpac -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVERESENDDATA","LACARCHIVEDATA","BISWSHISTORY","DTA_*","LACARCHIVEREF","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS" -ClearFromSource -ErrorAction SilentlyContinue
+write-host
 write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
-write-host ""
-& "$bacpacexepath\SqlPackage.exe" /a:import /sf:"$sqlbakPath\$RestoreFile" /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True
+
+#REstore BACPAC 
+& "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
 
 start-sleep -s 2
 
@@ -198,13 +246,10 @@ SELECT 'Oh no! Something bad just happened'
 END
 "@
 
-$newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabaseQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90 -trustservercertificate
-
-
+$newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabaseQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90 
 if ($newdbcheck.column1 -match "Something"){
-write-host "Database $($newDBname) don't exist in SQL. BACPAC restore failed? Check errors and try again." -ForegroundColor RED;pause;exit
+write-host "Database $($newDBname) not restored ok. Restore failed? Not enough diskspace? Check errors and try again." -ForegroundColor RED;pause;exit
 }
-
 #reconnect SQL users
 $sqlupdateDBQ = @"
 DROP USER IF EXISTS [axretailruntimeuser]
@@ -215,21 +260,59 @@ DROP USER IF EXISTS [axdbadmin]
 DROP USER IF EXISTS [axdeployextuser]
 DROP USER IF EXISTS [NT AUTHORITY\NETWORK SERVICE]
 
-CREATE USER axdeployuser FROM LOGIN axdeployuser
-EXEC sp_addrolemember 'db_owner', 'axdeployuser'
+IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axdeployuser')
+BEGIN
+	CREATE USER axdeployuser FROM LOGIN axdeployuser
+	EXEC sp_addrolemember 'db_owner', 'axdeployuser'
+END
 
-CREATE USER axdbadmin FROM LOGIN axdbadmin
-EXEC sp_addrolemember 'db_owner', 'axdbadmin'
+IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axdbadmin')
+BEGIN
+	ALTER AUTHORIZATION ON database::[$newDBname] TO sa
 
-CREATE USER axmrruntimeuser FROM LOGIN axmrruntimeuser
-EXEC sp_addrolemember 'db_datareader', 'axmrruntimeuser'
-EXEC sp_addrolemember 'db_datawriter', 'axmrruntimeuser'
+	CREATE USER axdbadmin FROM LOGIN axdbadmin
+	EXEC sp_addrolemember 'db_owner', 'axdbadmin'
+END
 
-CREATE USER axretaildatasyncuser FROM LOGIN axretaildatasyncuser
+IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axmrruntimeuser')
+BEGIN
+	CREATE USER axmrruntimeuser FROM LOGIN axmrruntimeuser
+	EXEC sp_addrolemember 'db_datareader', 'axmrruntimeuser'
+	EXEC sp_addrolemember 'db_datawriter', 'axmrruntimeuser'
+END
 
-CREATE USER axretailruntimeuser FROM LOGIN axretailruntimeuser
+IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axretaildatasyncuser')
+BEGIN
+	CREATE USER axretaildatasyncuser FROM LOGIN axretaildatasyncuser
+	IF (DATABASE_PRINCIPAL_ID('DataSyncUsersRole') IS NOT NULL)
+	BEGIN
+		EXEC sp_addrolemember 'DataSyncUsersRole', 'axretaildatasyncuser'
+	END
+END
 
-CREATE USER axdeployextuser FROM LOGIN axdeployextuser
+IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axretailruntimeuser')
+BEGIN
+	CREATE USER axretailruntimeuser FROM LOGIN axretailruntimeuser
+	IF (DATABASE_PRINCIPAL_ID('UsersRole') IS NOT NULL)
+	BEGIN
+		EXEC sp_addrolemember 'UsersRole', 'axretailruntimeuser'
+
+	END
+	
+	IF (DATABASE_PRINCIPAL_ID('ReportUsersRole') IS NOT NULL)
+	BEGIN
+		EXEC sp_addrolemember 'ReportUsersRole', 'axretailruntimeuser'
+	END
+END
+
+IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axdeployextuser')
+BEGIN
+	CREATE USER axdeployextuser FROM LOGIN axdeployextuser
+	IF (DATABASE_PRINCIPAL_ID('DeployExtensibilityRole') IS NOT NULL)
+	BEGIN
+		EXEC sp_addrolemember 'DeployExtensibilityRole', 'axdeployextuser'
+	END
+END
 
 CREATE USER [NT AUTHORITY\NETWORK SERVICE] FROM LOGIN [NT AUTHORITY\NETWORK SERVICE]
 EXEC sp_addrolemember 'db_owner', 'NT AUTHORITY\NETWORK SERVICE'
@@ -242,223 +325,420 @@ SET T1.storageproviderid = 0
 FROM docuvalue T1
 WHERE T1.storageproviderid = 1 --Azure storage
 
+
+IF((SELECT 1
+FROM SYS.CHANGE_TRACKING_DATABASES
+WHERE DATABASE_ID = DB_ID('$newDBname')) IS NULL)
+BEGIN
+	ALTER DATABASE [$newDBname] SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 6 DAYS, AUTO_CLEANUP = ON)
+END
+
+;--GO
 DROP PROCEDURE IF EXISTS SP_ConfigureTablesForChangeTracking
 DROP PROCEDURE IF EXISTS SP_ConfigureTablesForChangeTracking_V2
-GO
+;--GO
 -- Begin Refresh Retail FullText Catalogs
 DECLARE @RFTXNAME NVARCHAR(MAX);
 DECLARE @RFTXSQL NVARCHAR(MAX);
 DECLARE retail_ftx CURSOR FOR
-SELECT OBJECT_SCHEMA_NAME(object_id) + '.' + OBJECT_NAME(object_id) fullname FROM SYS.FULLTEXT_INDEXES
-    WHERE FULLTEXT_CATALOG_ID = (SELECT TOP 1 FULLTEXT_CATALOG_ID FROM SYS.FULLTEXT_CATALOGS WHERE NAME = 'COMMERCEFULLTEXTCATALOG');
+SELECT OBJECT_SCHEMA_NAME(object_id) + '.' + OBJECT_NAME(object_id) fullname
+FROM SYS.FULLTEXT_INDEXES
+WHERE FULLTEXT_CATALOG_ID = (SELECT TOP 1
+	FULLTEXT_CATALOG_ID
+FROM SYS.FULLTEXT_CATALOGS
+WHERE NAME = 'COMMERCEFULLTEXTCATALOG');
 OPEN retail_ftx;
 FETCH NEXT FROM retail_ftx INTO @RFTXNAME;
 
 BEGIN TRY
-    WHILE @@FETCH_STATUS = 0 
-    BEGIN 
-        PRINT 'Refreshing Full Text Index ' + @RFTXNAME;
-        EXEC SP_FULLTEXT_TABLE @RFTXNAME, 'activate';
-        SET @RFTXSQL = 'ALTER FULLTEXT INDEX ON ' + @RFTXNAME + ' START FULL POPULATION';
-        EXEC SP_EXECUTESQL @RFTXSQL;
-        FETCH NEXT FROM retail_ftx INTO @RFTXNAME;
-    END
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		PRINT 'Refreshing Full Text Index ' + @RFTXNAME;
+		EXEC SP_FULLTEXT_TABLE @RFTXNAME, 'activate';
+		SET @RFTXSQL = 'ALTER FULLTEXT INDEX ON ' + @RFTXNAME + ' START FULL POPULATION';
+		EXEC SP_EXECUTESQL @RFTXSQL;
+		FETCH NEXT FROM retail_ftx INTO @RFTXNAME;
+	END
 END TRY
 BEGIN CATCH
-    PRINT error_message()
+	PRINT error_message()
 END CATCH
 
-CLOSE retail_ftx; 
-DEALLOCATE retail_ftx; 
+CLOSE retail_ftx;
+DEALLOCATE retail_ftx;
 -- End Refresh Retail FullText Catalogs
 
---Begin create retail channel database record--
-declare @ExpectedDatabaseName nvarchar(64) = 'Default';
-declare @DefaultDataGroupRecId BIGINT;
-declare @ExpectedDatabaseRecId BIGINT; 
-IF NOT EXISTS (select 1 from RETAILCONNDATABASEPROFILE where NAME = @ExpectedDatabaseName)
-BEGIN 
-	select @DefaultDataGroupRecId = RECID from RETAILCDXDATAGROUP where NAME = 'Default'; 
-	insert into RETAILCONNDATABASEPROFILE (DATAGROUP, NAME, CONNECTIONSTRING, DATASTORETYPE)
-	values (@DefaultDataGroupRecId, @ExpectedDatabaseName, NULL, 0); 
-	select @ExpectedDatabaseRecId = RECID from RETAILCONNDATABASEPROFILE where NAME = @ExpectedDatabaseName; 
-	insert into RETAILCDXDATASTORECHANNEL (CHANNEL, DATABASEPROFILE)
-	select RCT.RECID, @ExpectedDatabaseRecId from RETAILCHANNELTABLE RCT
-	inner join RETAILCHANNELTABLEEXT RCTEX on RCTEX.CHANNEL = RCT.RECID
-        update RETAILCHANNELTABLEEXT set LIVECHANNELDATABASE = @ExpectedDatabaseRecId where LIVECHANNELDATABASE = 0
-END; 
---End create retail channel database record
+--Next, set system parameters ready for being a SQL Server Database.
+UPDATE sysglobalconfiguration
+SET    value = 'SQLSERVER'
+WHERE  NAME = 'BACKENDDB'
+
+UPDATE sysglobalconfiguration
+SET    value = 0
+WHERE  NAME = 'TEMPTABLEINAXDB'
 "@
 
 #Remap SQL users
 write-host "Remapping SQL users..." -ForegroundColor yellow
-Invoke-SqlCmd -Query $sqlupdateDBQ -ServerInstance localhost -Database $newDBname -ErrorAction Continue -querytimeout 0 -trustservercertificate
+Invoke-SqlCmd -Query $sqlupdateDBQ -ServerInstance localhost -Database $newDBname -ErrorAction Continue -querytimeout 0 
 write-host "Done remapping SQL users. (ignore any red error messages on console output)" -ForegroundColor green
-write-host ""
-
-write-host "Enabling change tracking..." -ForegroundColor Yellow
-$changetrackQ= @"
-ALTER DATABASE [$newDBname] SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 6 DAYS, AUTO_CLEANUP = ON);
-"@
-Invoke-SqlCmd -Query $changetrackQ -ServerInstance localhost -Database master -ErrorAction Continue -querytimeout 0 -trustservercertificate
 write-host "Database import done." -ForegroundColor green
 write-host ""
+#Cleanup Retail
+$sqlRetailcleanup = @"
+/* Drop all non-system stored procs under schemas crt, ax, ext and cdx */
+DECLARE @schemaCrt INT
+DECLARE @schemaAx INT
+DECLARE @schemaExt INT
+DECLARE @schemaCdx INT
 
-stopservices
+SELECT @schemaCrt = schema_id FROM sys.schemas WHERE [NAME] = 'crt'
+SELECT @schemaAx = schema_id FROM sys.schemas WHERE [NAME] = 'ax'
+SELECT @schemaExt = schema_id FROM sys.schemas WHERE [NAME] = 'ext'
+SELECT @schemaCdx = schema_id FROM sys.schemas WHERE [NAME] = 'cdx'
+
+DECLARE @name NVARCHAR(128)
+DECLARE @objId INT
+DECLARE @SQL NVARCHAR(1024)
+
+SELECT TOP 1 @name = [name], @objId = [object_id] FROM sys.procedures WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt,@schemaCdx) ORDER BY [create_date] DESC
+
+WHILE @name is not null AND len(@name) > 0
+BEGIN
+    SELECT @SQL = 'DROP PROCEDURE [' + OBJECT_SCHEMA_NAME(@objId) + '].[' + RTRIM(@name) +']'
+    EXEC (@SQL)
+    PRINT @SQL  
+	SELECT @name = NULL, @objId = 0  
+	SELECT TOP 1 @name = [name], @objId = [object_id] FROM sys.procedures WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt,@schemaCdx) ORDER BY [create_date] DESC
+END
+GO
+
+/* Drop all views under schema crt, ax and ext */
+DECLARE @schemaCrt INT
+DECLARE @schemaAx INT
+DECLARE @schemaExt INT
+DECLARE @schemaCdx INT
+
+SELECT @schemaCrt = schema_id FROM sys.schemas WHERE [NAME] = 'crt'
+SELECT @schemaAx = schema_id FROM sys.schemas WHERE [NAME] = 'ax'
+SELECT @schemaExt = schema_id FROM sys.schemas WHERE [NAME] = 'ext'
+SELECT @schemaCdx = schema_id FROM sys.schemas WHERE [NAME] = 'cdx'
+
+DECLARE @name NVARCHAR(128)
+DECLARE @objId INT
+DECLARE @SQL NVARCHAR(1024)
+
+/* Order by id DESC to remove the later view first since there may be some dependency between different views */
+SELECT TOP 1 @name = [name], @objId = [object_id] FROM sys.views WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt,@schemaCdx) ORDER BY [create_date] DESC
+
+WHILE @name is not null AND len(@name) > 0
+BEGIN
+    SELECT @SQL = 'DROP VIEW [' + OBJECT_SCHEMA_NAME(@objId) + '].[' + RTRIM(@name) +']'
+    EXEC (@SQL)
+    PRINT @SQL	
+	SELECT @name = NULL, @objId = 0
+    SELECT TOP 1 @name = [name], @objId = [object_id] FROM sys.views WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt,@schemaCdx) ORDER BY [create_date] DESC
+END
+GO
+
+/* Drop all functions under schemas crt, ax, ext and cdx*/
+DECLARE @schemaCrt INT
+DECLARE @schemaAx INT
+DECLARE @schemaExt INT
+DECLARE @schemaCdx INT
+
+SELECT @schemaCrt = schema_id FROM sys.schemas WHERE [NAME] = 'crt'
+SELECT @schemaAx = schema_id FROM sys.schemas WHERE [NAME] = 'ax'
+SELECT @schemaExt = schema_id FROM sys.schemas WHERE [NAME] = 'ext'
+SELECT @schemaCdx = schema_id FROM sys.schemas WHERE [NAME] = 'cdx'
+
+DECLARE @name NVARCHAR(128)
+DECLARE @objId INT
+DECLARE @SQL NVARCHAR(1024)
+DECLARE @functionsCount int
+DECLARE @postDeleteFunctionsCount int
+
+SELECT @functionsCount = count(*) FROM sysobjects WHERE [type] IN (N'FN', N'IF', N'TF', N'FS', N'FT') AND OBJECT_SCHEMA_NAME(id) IN ('crt','ax','ext','cdx')
+
+WHILE @functionsCount > 0
+BEGIN
+    DECLARE dropFunctions_cursor CURSOR FOR
+        SELECT [id], [name] FROM sysobjects WHERE [type] IN (N'FN', N'IF', N'TF', N'FS', N'FT') AND OBJECT_SCHEMA_NAME(id) IN ('crt','ax','ext','cdx') ORDER BY [crdate] DESC
+
+    OPEN dropFunctions_cursor
+    FETCH NEXT FROM dropFunctions_cursor INTO  @objId, @name
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SELECT @SQL = 'DROP FUNCTION [' + OBJECT_SCHEMA_NAME(@objId) + '].[' + RTRIM(@name) +']'
+        BEGIN TRY
+            EXEC (@SQL)
+            PRINT @SQL
+        END TRY
+        BEGIN CATCH
+            PRINT 'Error occurred while executing query: ' + @SQL
+            PRINT 'Error message: ' + ERROR_MESSAGE()
+            PRINT 'Check log to see if this is retried.'
+        END CATCH;
+        FETCH NEXT FROM dropFunctions_cursor INTO  @objId, @name
+    END
+    CLOSE dropFunctions_cursor;
+    DEALLOCATE dropFunctions_cursor;
+
+    SELECT @postDeleteFunctionsCount = count(*) FROM sysobjects WHERE [type] IN (N'FN', N'IF', N'TF', N'FS', N'FT') AND OBJECT_SCHEMA_NAME(id) IN ('crt','ax','ext','cdx')
+
+    IF @postDeleteFunctionsCount = @functionsCount
+        THROW 60000, 'Unable to progress with deleting functions. Same number of functions left as the previous iteration.', 1
+    ELSE
+        SET @functionsCount = @postDeleteFunctionsCount
+END
+GO
+
+/* Drop all foreign key constraints under schemas crt, ax, ext and cdx*/
+DECLARE @schemaCrt INT
+DECLARE @schemaAx INT
+DECLARE @schemaExt INT
+DECLARE @schemaCdx INT
+
+SELECT @schemaCrt = schema_id FROM sys.schemas WHERE [NAME] = 'crt'
+SELECT @schemaAx = schema_id FROM sys.schemas WHERE [NAME] = 'ax'
+SELECT @schemaExt = schema_id FROM sys.schemas WHERE [NAME] = 'ext'
+SELECT @schemaCdx = schema_id FROM sys.schemas WHERE [NAME] = 'cdx'
+
+DECLARE @name NVARCHAR(128)
+DECLARE @constraint NVARCHAR(254)
+DECLARE @tableSchema NVARCHAR(254)
+DECLARE @SQL NVARCHAR(1024)
+
+SELECT TOP 1 @name = TABLE_NAME, @tableSchema = TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE constraint_catalog=DB_NAME() AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND CONSTRAINT_SCHEMA IN ('crt','ax','ext', 'cdx') ORDER BY TABLE_NAME
+
+WHILE @name is not null
+BEGIN
+	SELECT @constraint = NULL
+    SELECT @constraint = (SELECT TOP 1 CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE constraint_catalog=DB_NAME() AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND TABLE_NAME = @name AND CONSTRAINT_SCHEMA IN ('crt','ax','ext', 'cdx') ORDER BY CONSTRAINT_NAME)
+    WHILE @constraint IS NOT NULL
+    BEGIN
+        SELECT @SQL = 'ALTER TABLE [' + @tableSchema + '].[' + RTRIM(@name) +'] DROP CONSTRAINT [' + RTRIM(@constraint) +']'
+        EXEC (@SQL)
+        PRINT @SQL
+		SELECT @constraint = NULL		
+        SELECT @constraint = (SELECT TOP 1 CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE constraint_catalog=DB_NAME() AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND CONSTRAINT_NAME <> @constraint AND TABLE_NAME = @name AND CONSTRAINT_SCHEMA IN ('crt','ax','ext', 'cdx') ORDER BY CONSTRAINT_NAME)
+    END
+SELECT TOP 1 @name = TABLE_NAME, @tableSchema = TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE constraint_catalog=DB_NAME() AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND CONSTRAINT_SCHEMA IN ('crt','ax','ext', 'cdx') ORDER BY TABLE_NAME
+END
+GO
+
+/* Drop all tables under schemas crt, ax, ext and cdx */
+DECLARE @schemaCrt INT
+DECLARE @schemaAx INT
+DECLARE @schemaExt INT
+DECLARE @schemaCdx INT
+
+SELECT @schemaCrt = schema_id FROM sys.schemas WHERE [NAME] = 'crt'
+SELECT @schemaAx = schema_id FROM sys.schemas WHERE [NAME] = 'ax'
+SELECT @schemaExt = schema_id FROM sys.schemas WHERE [NAME] = 'ext'
+SELECT @schemaCdx = schema_id FROM sys.schemas WHERE [NAME] = 'cdx'
+
+DECLARE @name NVARCHAR(128)
+DECLARE @objId INT
+DECLARE @SQL NVARCHAR(1024)
+
+SELECT TOP 1 @name = [name], @objId = [object_id] FROM sys.tables WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt, @schemaCdx) ORDER BY [create_date] DESC
+
+WHILE @name IS NOT NULL
+BEGIN	
+	SELECT @SQL = 'DROP TABLE [' + OBJECT_SCHEMA_NAME(@objId) + '].[' + RTRIM(@name) +']'
+	EXEC (@SQL)
+	PRINT @SQL	
+	SELECT @name = NULL, @objId = 0
+    SELECT TOP 1 @name = [name], @objId = [object_id] FROM sys.tables WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt, @schemaCdx) ORDER BY [create_date] DESC
+END
+GO
+
+/* Drop all types under schemas crt, ax, ext and cdx */
+DECLARE @schemaCrt INT
+DECLARE @schemaAx INT
+DECLARE @schemaExt INT
+DECLARE @schemaCdx INT
+
+SELECT @schemaCrt = schema_id FROM sys.schemas WHERE [NAME] = 'crt'
+SELECT @schemaAx = schema_id FROM sys.schemas WHERE [NAME] = 'ax'
+SELECT @schemaExt = schema_id FROM sys.schemas WHERE [NAME] = 'ext'
+SELECT @schemaCdx = schema_id FROM sys.schemas WHERE [NAME] = 'cdx'
+
+DECLARE @name NVARCHAR(128)
+DECLARE @schemaId INT
+DECLARE @SQL NVARCHAR(1024)
+
+/* Order by id DESC to remove the later type first since there may be some dependency between different types */
+SELECT TOP 1 @name = [name], @schemaId = [schema_id] FROM sys.types WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt,@schemaCdx) ORDER BY [user_type_id] DESC
+
+WHILE @name is not null AND len(@name) > 0
+BEGIN
+    SELECT @SQL = 'DROP TYPE [' + SCHEMA_NAME(@schemaId) + '].[' + RTRIM(@name) +']'
+    EXEC (@SQL)
+    PRINT @SQL	
+	SELECT @name = NULL, @schemaId = 0
+    SELECT TOP 1 @name = [name], @schemaId = [schema_id]  FROM sys.types WHERE [schema_id] IN (@schemaCrt,@schemaAx,@schemaExt,@schemaCdx) ORDER BY [user_type_id] DESC
+END
+GO
+
+/* Drop retail full text search catalog */
+IF EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE [name] = 'COMMERCEFULLTEXTCATALOG')
+BEGIN
+	DROP FULLTEXT CATALOG [COMMERCEFULLTEXTCATALOG]
+END
+
+/* Drop retail db roles */
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE [name] = 'DropDatabaseRoleExt')
+BEGIN
+	DROP PROCEDURE dbo.DropDatabaseRoleExt
+END
+GO
+
+CREATE PROCEDURE dbo.DropDatabaseRoleExt
+(
+	@RoleName NVARCHAR(255)
+)
+AS BEGIN
+	IF  EXISTS (SELECT * FROM dbo.sysusers WHERE name = @RoleName AND issqlrole = 1)
+	BEGIN 
+      DECLARE @RoleMemberName sysname	  
+      /* Cursor to Loop in for Each Member have the Role Privilege and Drop RoleMember */
+      DECLARE Member_Cursor CURSOR FOR
+      SELECT [name]
+      FROM dbo.sysusers
+      WHERE UID IN (
+            SELECT memberuid
+            FROM dbo.sysmembers
+            WHERE groupuid IN (
+                  SELECT UID FROM dbo.sysusers WHERE [name] = @RoleName AND issqlrole = 1)) 
+      OPEN Member_Cursor;
+ 
+      FETCH NEXT FROM Member_Cursor INTO @RoleMemberName
+ 
+      WHILE @@FETCH_STATUS = 0
+      BEGIN 
+            EXEC sp_droprolemember @rolename=@RoleName, @membername= @RoleMemberName 
+            FETCH NEXT FROM Member_Cursor INTO @RoleMemberName
+      END;
+ 
+      CLOSE Member_Cursor;
+      DEALLOCATE Member_Cursor;
+      /* End Of Cursor */ 
+	END
+	/* Checking If Role Name Exists In Database */
+	IF  EXISTS (SELECT * FROM sys.database_principals WHERE name = @RoleName AND TYPE = 'R')
+	BEGIN
+		DECLARE @SqlStatement NVARCHAR(1024)
+		SELECT @SqlStatement = 'DROP ROLE ' + @RoleName
+		EXEC sp_executesql @SqlStatement
+	END
+END
+GO
+
+EXEC dbo.DropDatabaseRoleExt 'DataSyncUsersRole'
+EXEC dbo.DropDatabaseRoleExt 'ReportUsersRole'
+EXEC dbo.DropDatabaseRoleExt 'db_executor'
+EXEC dbo.DropDatabaseRoleExt 'PublishersRole'
+EXEC dbo.DropDatabaseRoleExt 'UsersRole'
+EXEC dbo.DropDatabaseRoleExt 'DeployExtensibilityRole'
+GO
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE [name] = 'DropDatabaseRoleExt')
+BEGIN
+	DROP PROCEDURE dbo.DropDatabaseRoleExt
+END
+GO
+
+/* Drop retail schema crt, ax, ext, cdx */
+IF EXISTS (SELECT 1 FROM sys.schemas WHERE [name] = 'crt')
+BEGIN
+	DROP SCHEMA crt
+END
+GO
+
+IF EXISTS (SELECT 1 FROM sys.schemas WHERE [name] = 'ax')
+BEGIN
+	DROP SCHEMA ax
+END
+GO
+
+IF EXISTS (SELECT 1 FROM sys.schemas WHERE [name] = 'ext')
+BEGIN
+	DROP SCHEMA ext
+END
+GO
+
+IF EXISTS (SELECT 1 FROM sys.schemas WHERE [name] = 'cdx')
+BEGIN
+	DROP SCHEMA cdx
+END
+GO
+
+IF OBJECT_ID('__RETAIL_PENDING_DEPLOYMENT') IS NOT NULL DROP VIEW __RETAIL_PENDING_DEPLOYMENT;
+GO
+"@
+
+write-host "Retail fix running. Takes about 7-8 minutes. Please wait..." -ForegroundColor yellow
+Invoke-SqlCmd -Query $sqlRetailcleanup -ServerInstance localhost -Database $newdbname -ErrorAction Continue -querytimeout 0 
+write-host "Done fixing Retail settings." -ForegroundColor green
+
 
 #Check if VS and/or SSMS and kill processes
-$vs = taskkill /im devenv.exe /f
+$vs = taskkill /im devenv.exe /f | out-null
 $ssms = taskkill /im ssms.exe /f
 
 #Disable management reporter
-write-host "Disabling Management reporter service..." -ForegroundColor Yellow
-get-service | Where-Object {$_.Name -eq "MR2012ProcessService"} | Set-Service -StartupType Disabled
+#write-host "Disabling Management reporter service..." -ForegroundColor Yellow
+#get-service | Where-Object {$_.Name -eq "MR2012ProcessService"} | Set-Service -StartupType Disabled
 
-#query check if new AXDB_org exists
-$sqlDropAXDB_orgQ= @"
-IF DB_ID('AXDB_org') IS NOT NULL
-BEGIN
-ALTER DATABASE [AXDB_org] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-WAITFOR DELAY '00:00:02';
-ALTER DATABASE [AXDB_org] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
-WAITFOR DELAY '00:00:02';
-DROP DATABASE axdb_org;
-END
-"@
-write-host "Dropping AXDB_org if exists..." -ForegroundColor yellow
-$dbcheckpre = Invoke-SqlCmd -Query $sqlDropAXDB_orgQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90 -trustservercertificate
 
-#query rename existing AXDB
-write-host "Renaming AXDB to AXDB_org and $($newdbname) to AXDB..." -ForegroundColor yellow
+<#query rename existing AXDB
+write-host "Renaming existing AXDB to AXDB_org and $($newdbname) to AXDB..." -ForegroundColor yellow
 $sqlrenameorgAXDBq = @"
 IF DB_ID('AXDB') IS NOT NULL
 BEGIN
-ALTER DATABASE [AXDB] SET AUTO_CLOSE OFF;
-ALTER DATABASE [AXDB] SET AUTO_UPDATE_STATISTICS_ASYNC OFF;
 ALTER DATABASE [AXDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 ALTER DATABASE [AXDB] MODIFY NAME = AXDB_Org;
 WAITFOR DELAY '00:00:02';
 ALTER DATABASE [AXDB_org] SET MULTI_USER;
-ALTER DATABASE [AXDB_org] SET AUTO_UPDATE_STATISTICS_ASYNC ON;
 END
 "@
+$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
+#>
 
-$sqlrenameAXDBq= @"
-ALTER DATABASE [$newDBname] SET AUTO_UPDATE_STATISTICS_ASYNC OFF;
+$sqlrenameToAXDBq= @"
 ALTER DATABASE [$newDBname] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 WAITFOR DELAY '00:00:02';
 ALTER DATABASE [$newDBname] MODIFY NAME = AXDB;
 WAITFOR DELAY '00:00:02';
 ALTER DATABASE [AXDB] SET MULTI_USER;
-ALTER DATABASE [AxDB] SET AUTO_UPDATE_STATISTICS_ASYNC ON;
-ALTER DATABASE [AXDB] SET AUTO_CLOSE OFF;
-ALTER DATABASE [AXDB] SET RECOVERY SIMPLE;
 "@
 
-$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 -trustservercertificate
-$renamenewaxdb = Invoke-SqlCmd -Query $sqlrenameAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 -trustservercertificate
-write-host "Renamed existing AXDB to AXDB_org and $($newDBname) as AXDB." -ForegroundColor green
-write-host ""
+$renamenewaxdb = Invoke-SqlCmd -Query $sqlrenameToAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
+write-host "Renamed $($newDBname) as AXDB." -ForegroundColor green
+start-sleep -s 2
 
-#disable BIS triggers
-write-host "Disabling To-Increase BIS triggers..." -ForegroundColor yellow
-$DisableBIStriggersQ = @"
-IF OBJECT_ID(N'tempdb..#Results') IS NOT NULL
-BEGIN
-DROP TABLE #Results
-END
- 
-SELECT 'ALTER TABLE '+ (select Schema_name(schema_id) from sys.objects o 
-where o.object_id = parent_id) + '.'+object_name(parent_id) + ' DISABLE TRIGGER '+
-Name as DisableTriggerScript into #Results
-from sys.triggers t 
-where t.is_disabled = 0 and t.name like 'BisT%'
- 
-DECLARE @isql nvarchar(max)
-DECLARE c1 CURSOR LOCAL FORWARD_ONLY STATIC READ_ONLY for
-SELECT *
-FROM #Results
-open c1
-fetch next from c1 into @isql
-While @@fetch_status <> -1
-BEGIN
-exec(@isql)
-fetch next from c1 into @isql
-END
-close c1
-deallocate c1
+#set AXDB to simple
+$simplerecoveryQ = @"
+ALTER DATABASE AXDB SET RECOVERY SIMPLE
+GO
 "@
+$simplerec = Invoke-SqlCmd -Query $simplerecoveryQ -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
 
-Invoke-SqlCmd -Query $DisableBIStriggersQ -ServerInstance localhost -Database AXDB -ErrorAction Continue -querytimeout 0 -trustservercertificate
-
-
-#fix rowversion in kernel tables bug
-$rowversionfixQ = @"
-DECLARE @KernelTables TABLE (
-        TableName NVARCHAR(200),
-        TableNumber Int);
-DECLARE @ResultKernelTables TABLE (
-        TableNumber Int);
-
--- List of all Kernel Tables, with a unique TableNumber
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('SQLDICTIONARY',1)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('SYSCONFIG',2)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('USERINFO',3)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('SECURITYROLE',4)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('DATABASELOG',5)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('AOSDUPLICATEKEYEXCEPTIONMESSAGE',6)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('TIMEZONESLIST',7)
-INSERT INTO @KernelTables(TableName, TableNumber) VALUES('TIMEZONESRULESDATA',8)
-
--- get the KernelTable names
-DECLARE KernelTableName_cursor CURSOR LOCAL FOR
-SELECT TableName, TableNumber
-FROM @KernelTables
--- (-1) : Exception happened
--- 0  : Dropped no column
--- 1  : Dropped atleast one Kernel Table column
-
-DECLARE @Result INT = 0;
-DECLARE @KernelTableName NVARCHAR(200);
-DECLARE @KernelTableNumber INT;
-DECLARE @SqlCmd NVARCHAR(500);
-BEGIN TRY
-    BEGIN TRANSACTION T1
-		OPEN KernelTableName_cursor;
-		FETCH NEXT FROM KernelTableName_cursor INTO @KernelTableName, @KernelTableNumber;
-
-		WHILE @@FETCH_STATUS = 0
-			BEGIN
-				IF COL_LENGTH(@KernelTableName, 'SYSROWVERSIONNUMBER') IS NOT NULL
-					BEGIN
-                        SET @SqlCmd = 'ALTER TABLE dbo.' + @KernelTableName + ' DROP COLUMN SYSROWVERSIONNUMBER';
-						EXEC sp_executesql @SqlCmd;
-						SET @Result = 1;
-						INSERT INTO @ResultKernelTables(TableNumber) VALUES(@KernelTableNumber);
-					END
-
-				FETCH NEXT FROM KernelTableName_cursor INTO @KernelTableName, @KernelTableNumber;
-			END
-
-    COMMIT TRANSACTION T1
-
-    SELECT @Result AS Result, TableNumber AS KernelTableNumber, 0 AS Error, '' AS ErrorMessage
-    FROM @ResultKernelTables;
-
-END TRY
-
-BEGIN CATCH
-    SELECT -1 AS Result, -1 AS KernelTableNumber, ERROR_NUMBER() as Error, ERROR_MESSAGE() as ErrorMessage
-    ROLLBACK TRANSACTION T1
-END CATCH
+#Disable metadata cache warmup
+$disablemetadatacacheyQ = @"
+UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 "@
+$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacacheyQ -Database AXDB -ServerInstance localhost -ErrorAction continue -querytimeout 90 
 
-Invoke-SqlCmd -Query $rowversionfixQ -ServerInstance localhost -Database AXDB -ErrorAction Continue -querytimeout 0 -trustservercertificate
-
-
-#Start D365 services
+#Start D365 services and IIS website/pools
 startservices
-write-host 'Started AX related service after database restore. ' -ForegroundColor green
+Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
+Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
+
 
 
 }#end if check BACPAC
@@ -467,8 +747,5 @@ write-host "BACPAC not found in $($sqlbakPath)." -ForegroundColor RED
 }
 
 }#end $goaheadans
-
-write-host 'Run DBsync from Visual Studio after database restore.' -ForegroundColor green
- 
-pause
-exit
+remove-item $localfilename -force -ea 0
+pause;exit
