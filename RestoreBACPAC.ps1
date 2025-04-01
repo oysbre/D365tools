@@ -12,11 +12,16 @@ break
 
 $URL = "<SASURL>"
 
+#Define localdir for bacpac download
 $localdir = "d:\"
-if ($localdir -notmatch '\\$')
-{
-$localdir += '\'
-}
+if (-not(test-path $localdir)){
+	$localdir = "c:\temp"
+ 	if (-not(test-path $localdir)){	
+  		new-item -path $localdir -type directory -force | out-null
+    	} #end if testpath C:
+}#end if testpath D:
+#add backslash to $localdir it not set   	
+if ($localdir -notmatch '\\$') {$localdir += '\'}
 
 $localfilename = $localdir + "sandboxbackup.bacpac"  # << full local filepath aka D:\tempdev.bacpac
 
@@ -63,7 +68,23 @@ foreach ($service in $servicelist){
 }#end foreach service
 }#end function startservices
 
+function Run-DBSync() {
+  # Find the correct Package Local Directory (PLD)
+  $pldPath = "\AOSService\PackagesLocalDirectory"
+  $packageDirectory = "{0}$pldPath" -f $env:servicedrive
+  $SyncToolExecutable = '{0}\bin\SyncEngine.exe' -f $packageDirectory
+  $connectionString = "Data Source=localhost; " +
+        "Integrated Security=True; " +
+        "Initial Catalog=AxDb"
 
+    $params = @(
+        "-syncmode=`"fullall`""
+        "-metadatabinaries=$packageDirectory"
+        "-connect=`"$connectionString`""
+    )
+
+    & $SyncToolExecutable $params 2>&1 | Out-String    
+}#end function db-sync
 
 function Import-Module-SQLPS {
     #pushd and popd to avoid import from changing the current directory (ref: http://stackoverflow.com/questions/12915299/sql-server-2012-sqlps-module-changing-current-location-automatically)
@@ -734,11 +755,19 @@ UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 "@
 $disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacacheyQ -Database AXDB -ServerInstance localhost -ErrorAction continue -querytimeout 90 
 
+#sync DB
+write-host
+write-host "Sync DB now? Y/N" -foregroundcolor yellow;$syncans=read-host
+if ($syncans -eq 'Y'){
+	Run-DBSync
+}
+else {write-host "Run DB sync if needed to complete database restore" -foregroundcolor CYAN}
+
 #Start D365 services and IIS website/pools
 startservices
 Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
 Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
-
+write-host "Database restore complete." -foregroundcolor green
 
 
 }#end if check BACPAC
