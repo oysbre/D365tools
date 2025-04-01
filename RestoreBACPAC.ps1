@@ -69,20 +69,22 @@ foreach ($service in $servicelist){
 }#end function startservices
 
 function Run-DBSync() {
-  # Find the correct Package Local Directory (PLD)
-  $pldPath = "\AOSService\PackagesLocalDirectory"
-  $packageDirectory = "{0}$pldPath" -f $env:servicedrive
-  $SyncToolExecutable = '{0}\bin\SyncEngine.exe' -f $packageDirectory
-  $connectionString = "Data Source=localhost; " +
-        "Integrated Security=True; " +
-        "Initial Catalog=AxDb"
-
+    $aosPath = "{0}\AOSService" -f $env:servicedrive 
+    $packageDirectory = "$aosPath\PackagesLocalDirectory" 
+    $SyncToolExecutable = "$aosPath\webroot\bin\Microsoft.Dynamics.AX.Deployment.Setup.exe"
+    
+    $dbaccess = Get-D365DatabaseAccess
     $params = @(
-        "-syncmode=`"fullall`""
-        "-metadatabinaries=$packageDirectory"
-        "-connect=`"$connectionString`""
+        '-bindir',       $($packageDirectory)
+        '-metadatadir' , $($packageDirectory) 
+        '-sqluser',      $($dbaccess.sqluser)
+        '-sqlserver',    '.'
+        '-sqldatabase',  'AxDB'
+        '-setupmode',    'sync' 
+        '-syncmode',     'fullall' 
+        '-isazuresql',   'false' 
+        '-sqlpwd',       $($dbaccess.SqlPwd)
     )
-
     & $SyncToolExecutable $params 2>&1 | Out-String    
 }#end function db-sync
 
