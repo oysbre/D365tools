@@ -1,5 +1,5 @@
-If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
-{   
+#Script to restore BACPAC on D365 CHE.
+If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
 $arguments = "& '" + $myinvocation.mycommand.definition + "'"
 Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
@@ -7,26 +7,29 @@ break
 }
 
 #------------Region DEV variables----------------------------------------------#
-# In LCS>Asset library>Database backup, mark the database for download to the left of the name and then click "Generate SAS link". 
+# In LCS > Asset library > Database backup, mark the database for restore to the left of the name and then click "Generate SAS link". 
 # Paste the SAS URL in variable $URL below:
 
 $URL = "<SASURL>"
+#Define localdir/path for bacpac download
+$localdir = "D:\"  # default set to D:\. If not found, use C:\temp
+#----------END DEV variables -------------
 
-#Define localdir for bacpac download
-$localdir = "d:\"
+if ($URL -eq "<SASURL>"){write-host 'Set SASURL from LCS in variable "$URL" and try again.' -foregroundcolor yellow;pause;exit}
+if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
 if (-not(test-path $localdir)){
 	$localdir = "c:\temp"
  	if (-not(test-path $localdir)){	
   		new-item -path $localdir -type directory -force | out-null
     	} #end if testpath C:
 }#end if testpath D:
+
 #add backslash to $localdir it not set   	
 if ($localdir -notmatch '\\$') {$localdir += '\'}
 
 $localfilename = $localdir + "sandboxbackup.bacpac"  # << full local filepath aka D:\tempdev.bacpac
 
-
-#------------Region GLOBAL variables----------------------------------------------#
+#------------Region GLOBAL variables------------------------------------
 $bacpacFileNameAndPath = $localfilename
 # Will be created by script. Existing files will be overwritten.
 $modelFilePath = $localdir+"BacpacModel.xml" 
@@ -34,38 +37,38 @@ $modelFileUpdatedPath = $localdir +"UpdatedBacpacModel.xml"
 $newDBname = "importeddatabase_$((Get-Date).tostring("ddMMMyyyy"))" 
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
 $sqlbakPath = $localfilename
-#--------------------
+#--------------------END Region Global variables------------------------
 
+#------------------  FUNCTIONS -------------------------------
 function Get-UrlStatusCode([string] $Urlcheck) {
     try {  (Invoke-WebRequest -Uri $Urlcheck -UseBasicParsing -DisableKeepAlive -method head).StatusCode }
     catch [Net.WebException]  { [int]$_.Exception.Response.StatusCode  }
-}#end function URL test
-
+}#end function URL status
 
 function stopservices () {     
-foreach ($service in $servicelist){
-    $serviceobject = get-service -name $service -ea 0
-    if ($serviceobject){
-        if ($serviceobject.Status -ne 'Stopped'){
-            write-host "Stopping service $($serviceobject.name)..." -ForegroundColor yellow
-            stop-service $serviceobject -force
-            $serviceobject.WaitForStatus("Stopped")
-        }#end if status
-    }#end if $serviceobject
-}#end foreach service
+	foreach ($service in $servicelist){
+    		$serviceobject = get-service -name $service -ea 0
+    		if ($serviceobject){
+        		if ($serviceobject.Status -ne 'Stopped'){
+            			write-host "Stopping service $($serviceobject.name)..." -ForegroundColor yellow
+            			stop-service $serviceobject -force
+            			$serviceobject.WaitForStatus("Stopped")
+        		}#end if status
+    		}#end if $serviceobject
+	}#end foreach service
 }#end function stopservices
 
 function startservices () {
-foreach ($service in $servicelist){
-    $serviceobject = get-service -name $service -ea 0
-    if ($serviceobject){
-        if ($serviceobject.StartType -ne 'Disabled'){
-            write-host "Starting service $($serviceobject.name)..." -ForegroundColor yellow
-            start-service $serviceobject 
-            $serviceobject.WaitForStatus("Running")
-        }#end if startType
-    }#end if $serviceobject
-}#end foreach service
+	foreach ($service in $servicelist){
+    		$serviceobject = get-service -name $service -ea 0
+    		if ($serviceobject){
+        		if ($serviceobject.StartType -ne 'Disabled'){
+            			write-host "Starting service $($serviceobject.name)..." -ForegroundColor yellow
+            			start-service $serviceobject 
+            			$serviceobject.WaitForStatus("Running")
+        		}#end if startType
+    		}#end if $serviceobject
+	}#end foreach service
 }#end function startservices
 
 function Run-DBSync() {
@@ -86,7 +89,7 @@ function Run-DBSync() {
         '-sqlpwd',       $($dbaccess.SqlPwd)
     )
     & $SyncToolExecutable $params 2>&1 | Out-String    
-}#end function db-sync
+}#end function DB-sync
 
 function Import-Module-SQLPS {
     #pushd and popd to avoid import from changing the current directory (ref: http://stackoverflow.com/questions/12915299/sql-server-2012-sqlps-module-changing-current-location-automatically)
@@ -95,9 +98,14 @@ function Import-Module-SQLPS {
     push-location
     import-module sqlps 3>&1 | out-null
     pop-location
-}
+}#end function Import-Module-SQLPS
+# ----------------End Function area -----------------
 
 # BEGIN
+CLS
+write-host "This script will restore BACPAC, delete the existing AXDB and quit/kill VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
+if ($goaheadans -eq 'y'){
+write-host "Sync DB after BACPAC restore? [Y/N]" -foregroundcolor yellow;$syncans=read-host
 write-host 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
@@ -130,12 +138,6 @@ Import-Module-SQLPS
 
 if(get-module sqlps){"yes"}else{"no"}
 
-
-cls
-if ($URL -eq "<SASURL>"){write-host "Set SASURL from LCS in variable '$URL' and try again." -foregroundcolor yellow;pause;exit}
-if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
-
-
 #Install/update AzCopy
 If (!(test-path "C:\windows\AzCopy.exe")){
     write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
@@ -161,9 +163,7 @@ if ($azcopyupdate){
     }
 }#end AzCopy 
  
-CLS
-write-host "This script will restore BACPAC, switch the existing AXDB and quit VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
-if ($goaheadans -eq 'y'){
+
 
 #download from URL2Local
 $statuscode = Get-UrlStatusCode -urlcheck $URL
@@ -758,8 +758,6 @@ UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 $disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacacheyQ -Database AXDB -ServerInstance localhost -ErrorAction continue -querytimeout 90 
 
 #sync DB
-write-host
-write-host "Sync DB now? Y/N" -foregroundcolor yellow;$syncans=read-host
 if ($syncans -eq 'Y'){
 	Run-DBSync
 }
@@ -769,6 +767,7 @@ else {write-host "Run DB sync if needed to complete database restore" -foregroun
 startservices
 Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
 Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
+write-host 
 write-host "Database restore complete." -foregroundcolor green
 
 
