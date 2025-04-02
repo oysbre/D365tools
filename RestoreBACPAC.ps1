@@ -141,7 +141,7 @@ Import-Module-SQLPS
 if(get-module sqlps){"yes"}else{"no"}
 
 #Install/update AzCopy
-If (!(test-path "C:\windows\AzCopy.exe")){
+If (-not(test-path "C:\windows\AzCopy.exe")){
     write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
     remove-item $env:temp\AzCopy.zip -force -ea 0
     invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
@@ -165,21 +165,20 @@ if ($azcopyupdate){
     }
 }#end AzCopy 
  
-#download from URL2Local
+#download bacpac from LCS
 $statuscode = Get-UrlStatusCode -urlcheck $URL
 if ($statuscode -eq 200){
     #check if we got bacpac already
     if (-not(test-path $localfilename)){
-        write-host "Downloading $($localfilename) from LCS..." -ForegroundColor yellow
+        write-host "Downloading $($localfilename) from LCS/SASURL..." -ForegroundColor yellow
         azcopy copy $URL $localfilename
         unblock-file $localfilename
-
     }
     else {
-        write-host "Already found bacpac $($localfilename). To use this BACPAC, press Enter. Overwrite existing file with new database? Press letter D" -ForegroundColor Cyan;$bacpacans=read-host
+        write-host "Already found bacpac $($localfilename). To use this BACPAC, press Enter. Download and overwrite existing file? Press letter D" -ForegroundColor Cyan;$bacpacans=read-host
         if ($bacpacans -eq "D"){
             remove-item $localfilename -force -ea 0
-            write-host "Downloading BACPAC to $($localfilename) from LCS..." -ForegroundColor yellow
+            write-host "Downloading BACPAC to $($localfilename) from LCS/SASURL..." -ForegroundColor yellow
             azcopy copy $URL $localfilename
             unblock-file $localfilename 
         }#end if delete existing file
