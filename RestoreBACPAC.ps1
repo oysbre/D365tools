@@ -8,7 +8,7 @@ break
 
 #------------Region custom variables----------------------------------------------#
 # In LCS > Asset library > Database backup, mark the database for restore to the left of the name and then click "Generate SAS link". 
-# Paste the SAS URL in variable $URL below:
+# Replace <SASURL> with the SAS URL between " " in variable $URL below:
 
 $URL = "<SASURL>"
 
