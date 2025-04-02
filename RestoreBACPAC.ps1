@@ -1,4 +1,4 @@
-#Script to restore BACPAC on D365 CHE.
+#Script to restore BACPAC on D365 CHE. Needs to run as admin session
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
 $arguments = "& '" + $myinvocation.mycommand.definition + "'"
@@ -6,23 +6,25 @@ Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
 break
 }
 
-#------------Region DEV variables----------------------------------------------#
+#------------Region custom variables----------------------------------------------#
 # In LCS > Asset library > Database backup, mark the database for restore to the left of the name and then click "Generate SAS link". 
 # Paste the SAS URL in variable $URL below:
 
 $URL = "<SASURL>"
+
 #Define localdir/path for bacpac download
 $localdir = "D:\"  # default set to D:\. If not found, use C:\temp
-#----------END DEV variables -------------
 
-if ($URL -eq "<SASURL>"){write-host 'Set SASURL from LCS in variable "$URL" and try again.' -foregroundcolor yellow;pause;exit}
-if ($localfilename -eq "<local fullpathname here>"){write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
+#---------- END custom variables -------------
+
+if ($URL -eq "<SASURL>"){ write-host 'Set SASURL from LCS in variable "$URL" and try again.' -foregroundcolor yellow;pause;exit}
+if ($localfilename -eq "<local fullpathname here>"){ write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
 if (-not(test-path $localdir)){
 	$localdir = "c:\temp"
  	if (-not(test-path $localdir)){	
   		new-item -path $localdir -type directory -force | out-null
     	} #end if testpath C:
-}#end if testpath D:
+}#end if testpath 
 
 #add backslash to $localdir it not set   	
 if ($localdir -notmatch '\\$') {$localdir += '\'}
@@ -131,11 +133,11 @@ else {
         }#end if tagver 
     }
     else {write-host "Can't connect to github to fetch D365fo.tools" -ForegroundColor CYAN }
-}#end #install/update d365fo.tools
+}#end install/update d365fo.tools
 
+#use SQLPS module
 if(get-module sqlps){"yes"}else{"no"}
 Import-Module-SQLPS
-
 if(get-module sqlps){"yes"}else{"no"}
 
 #Install/update AzCopy
@@ -163,33 +165,29 @@ if ($azcopyupdate){
     }
 }#end AzCopy 
  
-
-
 #download from URL2Local
 $statuscode = Get-UrlStatusCode -urlcheck $URL
 if ($statuscode -eq 200){
     #check if we got bacpac already
-    if (!(test-path $localfilename)){
+    if (-not(test-path $localfilename)){
         write-host "Downloading $($localfilename) from LCS..." -ForegroundColor yellow
         azcopy copy $URL $localfilename
         unblock-file $localfilename
 
     }
     else {
-        write-host "Already found bacpac $($localfilename). To  use this BACPAC, press Enter. Overwrite existing file with new database? Press letter D" -ForegroundColor Cyan;
-        $bacpacans=read-host
+        write-host "Already found bacpac $($localfilename). To use this BACPAC, press Enter. Overwrite existing file with new database? Press letter D" -ForegroundColor Cyan;$bacpacans=read-host
         if ($bacpacans -eq "D"){
             remove-item $localfilename -force -ea 0
             write-host "Downloading BACPAC to $($localfilename) from LCS..." -ForegroundColor yellow
             azcopy copy $URL $localfilename
             unblock-file $localfilename 
-
         }#end if delete existing file
     }#end else
 }#end if statuscode check
 else {write-host "Error in URL $($url ): " $($statuscode) -ForegroundColor RED;pause;exit}
 
-#stop services before restore
+#stop D365 lreated services before restore
 stopservices
 
 #Check for BACPAC
@@ -200,8 +198,7 @@ if ($Latest){
 $RestoreFile = $Latest.Name
 write-host "Using BACPAC file $($RestoreFile)." -ForegroundColor yellow
 
-#drop AXDB
-#query check if new AXDB_org exists
+#drop AXDB_org if exists
 $sqlDropAXDB_orgQ= @"
 IF DB_ID('AXDB_org') IS NOT NULL
 BEGIN
@@ -215,7 +212,21 @@ END
 write-host "Dropping AXDB_org if exists..." -ForegroundColor yellow
 $dbcheckpre = Invoke-SqlCmd -Query $sqlDropAXDB_orgQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90
 
-#query check if new AXDB_org exists
+<#query rename existing AXDB
+write-host "Renaming existing AXDB to AXDB_org and $($newdbname) to AXDB..." -ForegroundColor yellow
+$sqlrenameorgAXDBq = @"
+IF DB_ID('AXDB') IS NOT NULL
+BEGIN
+ALTER DATABASE [AXDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+ALTER DATABASE [AXDB] MODIFY NAME = AXDB_Org;
+WAITFOR DELAY '00:00:02';
+ALTER DATABASE [AXDB_org] SET MULTI_USER;
+END
+"@
+$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
+#>
+
+#query check if AXDB exists and drop it
 $sqlDropAXDBQ= @"
 IF DB_ID('AXDB') IS NOT NULL
 BEGIN
@@ -230,13 +241,11 @@ END
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
 $dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDBQ -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 90
 
-#fix model.xml for unsupported features in SQL 2019 vs Azure SQL
+#fix model.xml for unsupported features in SQL vs Azure SQL
 Write-host "Exporting BACPAC Modelfile..." -ForegroundColor yellow
 Export-D365BacpacModelFile -Path $bacpacFileNameAndPath -OutputPath $modelFilePath -Force -Verbose
 Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs local SQL version..." -ForegroundColor yellow
 Repair-D365BacpacModelFile -path $modelFilePath -Force
-#>
-
 
 #get latest SQLPACKAGE
 $bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe -EA 0 -Force | sort lastwritetime | select -last 1 -expandproperty directoryname
@@ -256,7 +265,7 @@ Clear-D365TableDataFromBacpac -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","
 write-host
 write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
 
-#REstore BACPAC 
+#Restore BACPAC 
 & "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
 
 start-sleep -s 2
@@ -273,6 +282,7 @@ $newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabaseQ -Database master -Serve
 if ($newdbcheck.column1 -match "Something"){
 write-host "Database $($newDBname) not restored ok. Restore failed? Not enough diskspace? Check errors and try again." -ForegroundColor RED;pause;exit
 }
+
 #reconnect SQL users
 $sqlupdateDBQ = @"
 DROP USER IF EXISTS [axretailruntimeuser]
@@ -405,8 +415,8 @@ WHERE  NAME = 'TEMPTABLEINAXDB'
 write-host "Remapping SQL users..." -ForegroundColor yellow
 Invoke-SqlCmd -Query $sqlupdateDBQ -ServerInstance localhost -Database $newDBname -ErrorAction Continue -querytimeout 0 
 write-host "Done remapping SQL users. (ignore any red error messages on console output)" -ForegroundColor green
-write-host "Database import done." -ForegroundColor green
 write-host ""
+
 #Cleanup Retail
 $sqlRetailcleanup = @"
 /* Drop all non-system stored procs under schemas crt, ax, ext and cdx */
@@ -711,26 +721,11 @@ write-host "Done fixing Retail settings." -ForegroundColor green
 
 #Check if VS and/or SSMS and kill processes
 $vs = taskkill /im devenv.exe /f | out-null
-$ssms = taskkill /im ssms.exe /f
+$ssms = taskkill /im ssms.exe /f | out-null
 
 #Disable management reporter
 #write-host "Disabling Management reporter service..." -ForegroundColor Yellow
 #get-service | Where-Object {$_.Name -eq "MR2012ProcessService"} | Set-Service -StartupType Disabled
-
-
-<#query rename existing AXDB
-write-host "Renaming existing AXDB to AXDB_org and $($newdbname) to AXDB..." -ForegroundColor yellow
-$sqlrenameorgAXDBq = @"
-IF DB_ID('AXDB') IS NOT NULL
-BEGIN
-ALTER DATABASE [AXDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-ALTER DATABASE [AXDB] MODIFY NAME = AXDB_Org;
-WAITFOR DELAY '00:00:02';
-ALTER DATABASE [AXDB_org] SET MULTI_USER;
-END
-"@
-$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
-#>
 
 $sqlrenameToAXDBq= @"
 ALTER DATABASE [$newDBname] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -741,10 +736,11 @@ ALTER DATABASE [AXDB] SET MULTI_USER;
 "@
 
 $renamenewaxdb = Invoke-SqlCmd -Query $sqlrenameToAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
-write-host "Renamed $($newDBname) as AXDB." -ForegroundColor green
+write-host "Renamed $($newDBname) to AXDB." -ForegroundColor green
 start-sleep -s 2
 
-#set AXDB to simple
+#set AXDB to simple recovery mode
+write-host "Set AxDB to simple recovery mode..." -foregroundcolor yellow
 $simplerecoveryQ = @"
 ALTER DATABASE AXDB SET RECOVERY SIMPLE
 GO
@@ -752,6 +748,7 @@ GO
 $simplerec = Invoke-SqlCmd -Query $simplerecoveryQ -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
 
 #Disable metadata cache warmup
+write-host "Disable metadata cache warmup..." -foregroundcolor yellow
 $disablemetadatacacheyQ = @"
 UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 "@
