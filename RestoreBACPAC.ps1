@@ -77,7 +77,9 @@ function Run-DBSync() {
     $aosPath = "{0}\AOSService" -f $env:servicedrive 
     $packageDirectory = "$aosPath\PackagesLocalDirectory" 
     $SyncToolExecutable = "$aosPath\webroot\bin\Microsoft.Dynamics.AX.Deployment.Setup.exe"
-    
+	if (-not(get-command Get-D365DatabaseAccess)){
+        install-module d365fo.tools -force -AllowClobber
+	}
     $dbaccess = Get-D365DatabaseAccess
     $params = @(
         '-bindir',       $($packageDirectory)
