@@ -210,6 +210,32 @@ foreach ($c in $cs) {
 #reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /f /v WinREVersion /t REG_SZ /d "10.0.20348.2201"
 
 #Herestrings for Powershellscripts
+$dbsynccmd = @'
+#AX DB sync
+function Run-DBSync() {
+    $aosPath = "{0}\AOSService" -f $env:servicedrive 
+    $packageDirectory = "$aosPath\PackagesLocalDirectory" 
+    $SyncToolExecutable = "$aosPath\webroot\bin\Microsoft.Dynamics.AX.Deployment.Setup.exe"
+	if (-not(get-command Get-D365DatabaseAccess)){
+        install-module d365fo.tools -force -AllowClobber
+	}
+    $dbaccess = Get-D365DatabaseAccess
+    $params = @(
+        '-bindir',       $($packageDirectory)
+        '-metadatadir' , $($packageDirectory) 
+        '-sqluser',      $($dbaccess.sqluser)
+        '-sqlserver',    '.'
+        '-sqldatabase',  'AxDB'
+        '-setupmode',    'sync' 
+        '-syncmode',     'fullall' 
+        '-isazuresql',   'false' 
+        '-sqlpwd',       $($dbaccess.SqlPwd)
+        )#end params
+    Write-host "Syncing AxDB..."-foregroundcolor yellow
+    & $SyncToolExecutable $params 2>&1 | Out-String    
+}#end function DB-sync
+Run-DBSync
+'@
 $unsetcmd = @'
 #Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
@@ -246,6 +272,7 @@ Write-host "Creating powershellscripts on Desktop to start/stop services used be
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
+Set-Content -Path "$DesktopPath\RunDBsync.ps1" -Value $dbsynccmd
 
 #Download powershellscripts for LCS download
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "$DesktopPath\DownloadWithAzCopy.ps1"
