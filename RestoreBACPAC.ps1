@@ -89,7 +89,8 @@ function Run-DBSync() {
         '-syncmode',     'fullall' 
         '-isazuresql',   'false' 
         '-sqlpwd',       $($dbaccess.SqlPwd)
-    )
+        )#end params
+    Write-host "Syncing AxDB..."-foregroundcolor yellow
     & $SyncToolExecutable $params 2>&1 | Out-String    
 }#end function DB-sync
 
