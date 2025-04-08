@@ -167,6 +167,17 @@ if ($azcopyupdate){
     remove-item $env:temp\AzCopy -force -Recurse
     }
 }#end AzCopy 
+
+#get latest SQLPACKAGE
+write-host "Installing latest SQLPACKAGE to C:\SQLPACKAGECORE..." -ForegroundColor yellow
+remove-item $env:temp\sqlpackagecore.zip -force -ea 0
+$uri = "https://aka.ms/sqlpackage-windows"
+$request = Invoke-WebRequest -Uri $uri -MaximumRedirection 2 -ErrorAction 0 -OutFile $env:temp\sqlpackagecore.zip
+unblock-file $env:temp\sqlpackagecore.zip
+Expand-Archive $env:temp\sqlpackagecore.zip  c:\sqlpackagecore  -Force
+remove-item $env:temp\sqlpackagecore.zip -force
+$bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe -EA 0 -Force | sort lastwritetime | select -last 1 -expandproperty directoryname
+
  
 #download bacpac from LCS
 $statuscode = Get-UrlStatusCode -urlcheck $URL
@@ -248,19 +259,6 @@ Write-host "Exporting BACPAC Modelfile..." -ForegroundColor yellow
 Export-D365BacpacModelFile -Path $bacpacFileNameAndPath -OutputPath $modelFilePath -Force -Verbose
 Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs local SQL version..." -ForegroundColor yellow
 Repair-D365BacpacModelFile -path $modelFilePath -Force
-
-#get latest SQLPACKAGE
-$bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe -EA 0 -Force | sort lastwritetime | select -last 1 -expandproperty directoryname
-If ($bacpacexepath -eq $null){
-    write-host "Installing latest SQLPACKAGE to C:\SQLPACKAGECORE..." -ForegroundColor yellow
-    remove-item $env:temp\sqlpackagecore.zip -force -ea 0
-    $uri = "https://aka.ms/sqlpackage-windows"
-    $request = Invoke-WebRequest -Uri $uri -MaximumRedirection 2 -ErrorAction 0 -OutFile $env:temp\sqlpackagecore.zip
-    unblock-file $env:temp\sqlpackagecore.zip
-    Expand-Archive $env:temp\sqlpackagecore.zip  c:\sqlpackagecore  -Force
-    remove-item $env:temp\sqlpackagecore.zip -force
-    $bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe -EA 0 -Force | sort lastwritetime | select -last 1 -expandproperty directoryname
-}
 
 write-host "Truncating tables in BACPAC before restore/import..." -ForegroundColor Yellow
 Clear-D365TableDataFromBacpac -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVERESENDDATA","LACARCHIVEDATA","BISWSHISTORY","DTA_*","LACARCHIVEREF","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS" -ClearFromSource -ErrorAction SilentlyContinue
