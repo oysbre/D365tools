@@ -173,39 +173,31 @@ if ($IPaddress){
 }#end $ipaddress
 
 #Enable Ciphersuites for Windows Update
-#Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 -Position 0
-#Enable-TlsCipherSuite -Name TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256 -Position 1
-$cs = 'TLS_AES_256_GCM_SHA384',                    
-  'TLS_AES_128_GCM_SHA256',
-  'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384',
-  'TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256',
-  'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384',     
-  'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256',
-  'TLS_DHE_RSA_WITH_AES_256_GCM_SHA384',       
-  'TLS_DHE_RSA_WITH_AES_128_GCM_SHA256',
-  'TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384',
-  'TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256',
-  'TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384',     
-  'TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256',
-  'TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA',      
-  'TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA',
-  'TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA',        
-  'TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA',
-  'TLS_RSA_WITH_AES_256_GCM_SHA384',           
-  'TLS_RSA_WITH_AES_128_GCM_SHA256',
-  'TLS_RSA_WITH_AES_256_CBC_SHA256',           
-  'TLS_RSA_WITH_AES_128_CBC_SHA256',
-  'TLS_RSA_WITH_3DES_EDE_CBC_SHA'
-$cspos = 0
-foreach ($c in $cs) {
-    try {
-        'Enabling ' + $c
-        Enable-TlsCiphersuite -Name $c -position $cspos
-    } catch {
-        $PSItem.Exception.Message
-    }
-    $cspos = $cspos+1
-}#end foreach cipher
+$regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
+$ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+Write-host "Values before: $ciphers";
+$cipherList = $ciphers.Split(',');
+#Set strong cryptography on 64 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+#set strong cryptography on 32 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+$updateReg = $false;
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
+    $ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
+    $updateReg = $true;
+}
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
+    $ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
+    $updateReg = $true;
+}
+if ($updateReg) {
+    Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
+    $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+    write-host "Values after: $ciphers";
+    Write-host "Reboot computer to use new ciphersuites..." -foregroundcolor Yellow
+}
 
 #reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /f /v WinREVersion /t REG_SZ /d "10.0.20348.2201"
 
