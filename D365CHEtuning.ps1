@@ -270,6 +270,7 @@ Set-Content -Path "$DesktopPath\RunDBsync.ps1" -Value $dbsynccmd
 
 #Download powershellscripts for LCS download
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "$DesktopPath\DownloadWithAzCopy.ps1"
+iwr "https://raw.githubusercontent.com/oysbre/D365tools/refs/heads/main/RestoreBACPAC.ps1" -outfile "$DesktopPath\RestoreBACPAC.ps1"
 
 # MS Visual C++ 2022 redist install/update
 $DownloadPath = "$env:temp"
