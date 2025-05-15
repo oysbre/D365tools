@@ -6,16 +6,19 @@ iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -o
 - Installs latest SSMS, AgentRansack, 7Zip, Chrome, AzCopy, Notepad++ and Powershell modules D365fo.tools, NuGet, PowerShellGet.
 - Installs/update Visual C++ redist needed for 10.0.36 and up
 - Add powershellscript "DownloadWithAzCopy.ps1" to Desktop to download files from LCS fast
-- Add powershellscripts to Desktop to Start & Stop D365 dependent services
+- Add powershellscripts to Desktop to Start & Stop D365 dependent services, DBSync and unset READONLY flag on XML,RDL and LOG files.
 - Set the Windows account passwordpolicy to never expire
 - Sets WinDefender rules that excludes D365 processes and files
 - Sets Powerplan to "High performance"
 - Grant the SQL serviceaccount "Perform Volume Maintenance Task" rights to speedup restore/expanding datadisk
 - Enables Traceflag 7412 in SQL instance to see live execution plans in SSMS
+- Set SQL instance MAXMEMORY 1/4 of OS system memory
 - Set timezone based on IP location
 - Use IIS instead of IIS Express
 - Enable IIS Application Initialization and optimize appools
 - Show computericon on Desktop with servername
+- Add new TLS 1.2 Ciphers
+- 
 
 'D365LocalDEVtuning.ps1' is used post-creation of Local D365 DEV environment to tune performance and rename the server.
 Uses many of the same tuning settings from Cloudhosted optimizing script.
