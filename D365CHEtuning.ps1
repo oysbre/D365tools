@@ -265,6 +265,7 @@ Write-host "Creating powershellscripts on Desktop to start/stop services used be
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
 Set-Content -Path "$DesktopPath\StartServices.ps1" -Value $StartServicesCmd
+Set-Content -Path "$DesktopPath\UnsetREADONLYflag.ps1" -Value $unsetcmd
 Set-Content -Path "$DesktopPath\RunDBsync.ps1" -Value $dbsynccmd
 
 #Download powershellscripts for LCS download
