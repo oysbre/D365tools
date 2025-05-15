@@ -23,10 +23,9 @@ CLS
 Write-host "This script runs several optimization settings for the CHE environment." -foregroundcolor Cyan
 
 #Install PowershellGet,Nuget and D365fo.tools
-Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Import-PackageProvider -Name NuGet 
+Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 
 if ((get-module -name PowerShellGet) -eq $null){
 	Write-host "Installing PowershellGet..." -foregroundcolor yellow
