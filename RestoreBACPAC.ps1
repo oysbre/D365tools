@@ -229,9 +229,7 @@ if ($statuscode -eq 200){
         }#end if delete existing file
     }#end else
 }#end if statuscode check
-else {write-host "Error in URL $($url ): " $($statuscode) -ForegroundColor RED;pause;exit}
-
-
+else {write-host "Can't download BACPAC. Check SASURL. Expired? Error in URL $($url ): " $($statuscode) -ForegroundColor RED;pause;exit}
 
 #Check for BACPAC
 $Latest = Get-ChildItem -Path $sqlbakPath -ea 0| Where-Object {$_.name -like "*.bacpac"} | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -251,6 +249,9 @@ write-host "Truncating tables in BACPAC before restore/import..." -ForegroundCol
 Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","EVENTINBOXDATA","EVENTINBOX","RETAILEODSTATEMENTCONTROLLERLOG","SMMTRANSLOG" -ClearFromSource -ErrorAction SilentlyContinue
 write-host
 write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
+
+#stop D365 related services before restore
+stopservices
 
 #drop AXDB_org if exists
 $sqlDropAXDB_orgQ= @"
@@ -294,9 +295,6 @@ END
 "@
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
 $dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDBQ -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 90
-
-#stop D365 related services before restore
-stopservices
 
 #Restore BACPAC 
 & "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
