@@ -15,7 +15,7 @@ If (-NOT (Test-Path $PSRegistryPath)) {
 }  
 # Now set the value
 New-ItemProperty -Path $PSRegistryPath -Name $Name -Value $Value -PropertyType String -Force
-
+$ProgressPreference = 'SilentlyContinue'  
 # Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
