@@ -22,6 +22,39 @@ $ProgressPreference = 'SilentlyContinue'
 CLS
 Write-host "This script runs several optimization settings for the CHE environment." -foregroundcolor Cyan
 
+#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
+$regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
+$ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+Write-host "Values before: $ciphers";
+$cipherList = $ciphers.Split(',');
+#Set strong cryptography on 64 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+#set strong cryptography on 32 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+$updateReg = $false;
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
+    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
+    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256,')
+    $updateReg = $true;
+}
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
+    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
+    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,')
+    $updateReg = $true;
+}
+if ($updateReg) {
+    Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
+    $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+    write-host "Values after: $ciphers";
+    Write-host "Rebooting computer to use new ciphersuites. Re-run CHE script after reboot." -foregroundcolor Yellow;
+    start-sleep -s 5
+    Restart-Computer -force
+}
+
+
+
 #Install PowershellGet,Nuget and D365fo.tools
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Import-PackageProvider -Name NuGet 
@@ -171,34 +204,6 @@ if ($IPaddress){
     }#end iana
 }#end $ipaddress
 
-#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
-$regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
-$ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
-Write-host "Values before: $ciphers";
-$cipherList = $ciphers.Split(',');
-#Set strong cryptography on 64 bit .Net Framework (version 4 and above)
-Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
-#set strong cryptography on 32 bit .Net Framework (version 4 and above)
-Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
-$updateReg = $false;
-if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
-    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
-    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
-    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256,')
-    $updateReg = $true;
-}
-if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
-    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
-    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
-    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,')
-    $updateReg = $true;
-}
-if ($updateReg) {
-    Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
-    $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
-    write-host "Values after: $ciphers";
-    Write-host "Reboot computer to use new ciphersuites..." -foregroundcolor Yellow
-}
 
 #reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /f /v WinREVersion /t REG_SZ /d "10.0.20348.2201"
 
