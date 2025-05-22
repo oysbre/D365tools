@@ -107,6 +107,37 @@ function Import-Module-SQLPS {
 # ----------------End Function area -----------------
 
 # BEGIN
+#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
+$regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
+$ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+$cipherList = $ciphers.Split(',');
+#Set strong cryptography on 64 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+#set strong cryptography on 32 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+$updateReg = $false;
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
+    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
+    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256,')
+    $updateReg = $true;
+}
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
+    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
+    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,')
+    $updateReg = $true;
+}
+if ($updateReg) {
+    Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
+    $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+    write-host "Values after: $ciphers";
+    Write-host "======================================================================" -foregroundcolor Yellow;
+    Write-host "Rebooting computer to use new ciphersuites. Re-run script after reboot." -foregroundcolor Yellow;
+    Write-host "======================================================================" -foregroundcolor Yellow;
+    start-sleep -s 8
+    Restart-Computer -force
+}
 CLS
 write-host "This script will restore BACPAC, delete the existing AXDB and quit/kill VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
 if ($goaheadans -eq 'y'){
@@ -200,8 +231,7 @@ if ($statuscode -eq 200){
 }#end if statuscode check
 else {write-host "Error in URL $($url ): " $($statuscode) -ForegroundColor RED;pause;exit}
 
-#stop D365 lreated services before restore
-stopservices
+
 
 #Check for BACPAC
 $Latest = Get-ChildItem -Path $sqlbakPath -ea 0| Where-Object {$_.name -like "*.bacpac"} | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -210,6 +240,17 @@ $Latest = Get-ChildItem -Path $sqlbakPath -ea 0| Where-Object {$_.name -like "*.
 if ($Latest){
 $RestoreFile = $Latest.Name
 write-host "Using BACPAC file $($RestoreFile)." -ForegroundColor yellow
+
+#fix model.xml for unsupported features in SQL vs Azure SQL
+Write-host "Exporting BACPAC Modelfile..." -ForegroundColor yellow
+Export-D365BacpacModelFile -Path $bacpacFileNameAndPath -OutputPath $modelFilePath -Force -Verbose
+Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs local SQL version..." -ForegroundColor yellow
+Repair-D365BacpacModelFile -path $modelFilePath -Force
+
+write-host "Truncating tables in BACPAC before restore/import..." -ForegroundColor Yellow
+Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","EVENTINBOXDATA","EVENTINBOX","RETAILEODSTATEMENTCONTROLLERLOG","SMMTRANSLOG" -ClearFromSource -ErrorAction SilentlyContinue
+write-host
+write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
 
 #drop AXDB_org if exists
 $sqlDropAXDB_orgQ= @"
@@ -254,16 +295,8 @@ END
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
 $dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDBQ -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 90
 
-#fix model.xml for unsupported features in SQL vs Azure SQL
-Write-host "Exporting BACPAC Modelfile..." -ForegroundColor yellow
-Export-D365BacpacModelFile -Path $bacpacFileNameAndPath -OutputPath $modelFilePath -Force -Verbose
-Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs local SQL version..." -ForegroundColor yellow
-Repair-D365BacpacModelFile -path $modelFilePath -Force
-
-write-host "Truncating tables in BACPAC before restore/import..." -ForegroundColor Yellow
-Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","RETAILEODSTATEMENTCONTROLLERLOG" -ClearFromSource -ErrorAction SilentlyContinue
-write-host
-write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
+#stop D365 related services before restore
+stopservices
 
 #Restore BACPAC 
 & "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
