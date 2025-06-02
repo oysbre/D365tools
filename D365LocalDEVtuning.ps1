@@ -54,7 +54,9 @@ if ($updateReg) {
     Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
     $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
     write-host "Values after: $ciphers";
-    Write-host "Rebooting computer to use new ciphersuites. Re-run this script after reboot." -foregroundcolor Yellow;
+    Write-host "############################################################################" -foregroundcolor Yellow;
+    Write-host "Rebooting computer now to use new ciphersuites. Re-run this script after reboot." -foregroundcolor Yellow;
+    Write-host "############################################################################" -foregroundcolor Yellow;
     start-sleep -s 5
     Restart-Computer -force
 }
