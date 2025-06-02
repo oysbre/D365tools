@@ -123,10 +123,10 @@ if ((Get-ItemPropertyvalue HKLM:\SOFTWARE\Microsoft\Dynamics\Deployment -name In
 }
 @('HotfixInstallationRecords', 'MetadataModelInstallationRecords', 'Runbooks', 'ServiceModelInstallationRecords') |
     ForEach-Object {
-    	if (!(test-path (Join-Path "$Installinfodir\InstallationRecords\" $_))){
+    	if (-not(test-path (Join-Path "$Installinfodir\InstallationRecords\" $_))){
         	New-Item (Join-Path "$Installinfodir\InstallationRecords\" $_) -ItemType Directory -force | out-null
-	 }
-    }
+	 }#end if test-path
+    }#end foreach-object
 
 #set ServiceDrive to C: as an environmental path if not set
 if ((get-childitem -path env: | where  {$_.name -eq "servicedrive"}) -eq $null){
@@ -153,7 +153,7 @@ $webclient.DownloadFile($vcurl, $vcfile)
 if (test-path $vcfile){
 $vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
 $vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
-    
+    #Check VC redist version
     if (($vcdlver -gt $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
        write-host "Installing/updating MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
        $vcargs = "/install /passive /norestart"
