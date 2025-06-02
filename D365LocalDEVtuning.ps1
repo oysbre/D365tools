@@ -1,5 +1,6 @@
 <# 
 Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
+-enable new secure TLS 1.2 ciphersuites is missing. reboot required. 
 -never expire password for user
 -rename server, sqlserver and SSRS
 -install/update Visual C++ 2022 redist install/update
@@ -8,7 +9,7 @@ Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet
 -include newer VS in TestStart script
 -set SNI client to trust server certficate
 -install/update NuGet, AzCopy, D365fo.tools, 7zip, Notepad++, Azure Storage emulator
--add Powershellscript to Desktop for stop and start D365 related services
+-add Powershellscript for stop and start D365 related services to Desktop
 -create AdminUserprovision shortcut to Desktop
 -enable IIS App init and pre-load to initialize AOS faster  and set application pool to always running, disable timeout.
 -create and setup "re-arm" script and taskschedule to check during logon
@@ -26,6 +27,37 @@ Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSComm
 #Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = 'SilentlyContinue'
+
+#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
+$regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
+$ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+Write-host "Values before: $ciphers";
+$cipherList = $ciphers.Split(',');
+#Set strong cryptography on 64 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+#set strong cryptography on 32 bit .Net Framework (version 4 and above)
+Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
+$updateReg = $false;
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
+    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
+    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256,')
+    $updateReg = $true;
+}
+if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
+    Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
+    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
+    $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,')
+    $updateReg = $true;
+}
+if ($updateReg) {
+    Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
+    $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
+    write-host "Values after: $ciphers";
+    Write-host "Rebooting computer to use new ciphersuites. Re-run CHE script after reboot." -foregroundcolor Yellow;
+    start-sleep -s 5
+    Restart-Computer -force
+}
 
 #Install NuGet if not found
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
