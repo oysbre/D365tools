@@ -9,7 +9,6 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 @("*.rdl","*.log","*.xml","*.txt") | foreach {Get-ChildItem -Path "$env:servicedrive\AosService\PackagesLocalDirectory\*" -Recurse -Filter "$_" | foreach { $_.IsReadOnly=$False }}
 '@
 
-
-Write-host "Creating powershellscript on Desktop that unset READONLY flag on filextensions" -foregroundcolor yellow
+Write-host "Creating powershellscript on Desktop that unset READONLY flag on file extensions .rdl, .log, .xml and .txt" -foregroundcolor yellow
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\UnsetREADONLYflag.ps1" -Value $unsetcmd
