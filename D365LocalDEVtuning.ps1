@@ -1,6 +1,6 @@
 <# 
 Powershellscript to tune/optimize/fix the local D365 VHD image. Require internet connection.
--enable new secure TLS 1.2 ciphersuites is missing. reboot required. 
+-enable new secure TLS 1.2 ciphersuites if missing. reboot required. 
 -never expire password for user
 -rename server, sqlserver and SSRS
 -install/update Visual C++ 2022 redist install/update
