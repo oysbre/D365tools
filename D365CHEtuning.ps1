@@ -23,6 +23,7 @@ CLS
 Write-host "This script runs optimizationsettings for the CHE DEV environment." -foregroundcolor Cyan
 
 #Add and enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update if not found
+write-host "Add and enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update if not found" -foregroundcolor yellow
 $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
 $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
 Write-host "Values before: $ciphers";
@@ -48,7 +49,9 @@ if ($updateReg) {
     Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
     $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
     write-host "Values after: $ciphers";
-    Write-host "Rebooting computer to use new ciphersuites. Re-run CHE script after reboot." -foregroundcolor Yellow;
+    write-host "###########################################################################"
+    Write-host "Rebooting computer in 5 sec to enable new ciphersuites. Re-run script after reboot!" -foregroundcolor Yellow;
+    write-host "###########################################################################"
     start-sleep -s 5
     Restart-Computer -force
 }
