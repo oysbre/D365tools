@@ -57,6 +57,7 @@ if ($updateReg) {
 }
 
 #Install PowershellGet, Nuget and D365fo.tools
+Write-host "Installing Nuget+++..." -foregroundcolor yellow
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Import-PackageProvider -Name NuGet 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
