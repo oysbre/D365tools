@@ -4,25 +4,25 @@
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
-#enable execution of scripts
-# Set variables to indicate value and key to set
+
+#Enable execution of powershellscripts
 $PSRegistryPath = 'HKLM:\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell'
 $Name         = 'ExecutionPolicy'
 $Value        = 'Unrestricted'
-# Create the key if it does not exist
 If (-NOT (Test-Path $PSRegistryPath)) {
   New-Item -Path $PSRegistryPath -Force | Out-Null
 }  
-# Now set the value
 New-ItemProperty -Path $PSRegistryPath -Name $Name -Value $Value -PropertyType String -Force
+
 $ProgressPreference = 'SilentlyContinue'  
+
 # Modern websites require TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$ProgressPreference = 'SilentlyContinue'
-CLS
-Write-host "This script runs several optimization settings for the CHE environment." -foregroundcolor Cyan
 
-#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
+CLS
+Write-host "This script runs optimizationsettings for the CHE DEV environment." -foregroundcolor Cyan
+
+#Add and enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update if not found
 $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
 $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
 Write-host "Values before: $ciphers";
@@ -53,9 +53,7 @@ if ($updateReg) {
     Restart-Computer -force
 }
 
-
-
-#Install PowershellGet,Nuget and D365fo.tools
+#Install PowershellGet, Nuget and D365fo.tools
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Import-PackageProvider -Name NuGet 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
@@ -82,14 +80,14 @@ else {
         }#end if tagver 
 }#end #install/update d365fo.tools
 
+#Install PSmodule SQLserver
 if((Get-Module sqlserver -ListAvailable) -eq $null){
-    Write-host "Installing PS module sqlserver..." -foregroundcolor yellow
+    Write-host "Installing PSmodule sqlserver..." -foregroundcolor yellow
     Install-Module sqlserver -Force -AllowClobber
 }
 
-#remove SQLPS module from this session - obselete
+#remove SQLPS module from this session - obselete/deprecated
 Remove-Module SQLPS -ea 0
-
 function Import-Module-SQLServer {
 push-location
 import-module sqlserver 3>&1 | out-null
@@ -174,7 +172,7 @@ function Set-RegistryValueForAllUsers {
 #Set-MpPreference -DisableRealtimeMonitoring $true 
 #region Install tools
 if ($env:computername -notlike "*FOCO*"){
-Add-D365WindowsDefenderRules
+	Add-D365WindowsDefenderRules
 }
 Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
@@ -204,10 +202,7 @@ if ($IPaddress){
     }#end iana
 }#end $ipaddress
 
-
-#reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /f /v WinREVersion /t REG_SZ /d "10.0.20348.2201"
-
-#Herestrings for Powershellscripts
+#Herestring variables for Powershellscripts
 $dbsynccmd = @'
 #AX DB sync
 function Run-DBSync() {
@@ -234,6 +229,7 @@ function Run-DBSync() {
 }#end function DB-sync
 Run-DBSync
 '@
+
 $unsetcmd = @'
 #Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
@@ -265,7 +261,7 @@ Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
 Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
 '@
 
-#Create powershellscripts on Desktop to start/stop services used before DB sync
+#Create powershellscripts on Desktop from herestrings above
 Write-host "Creating powershellscripts on Desktop to start/stop services used before DB sync" -foregroundcolor yellow
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\StopServices.ps1" -Value $StopServicesCmd
@@ -274,7 +270,7 @@ Set-Content -Path "$DesktopPath\UnsetREADONLYflag.ps1" -Value $unsetcmd
 Set-Content -Path "$DesktopPath\RunDBsync.ps1" -Value $dbsynccmd
 
 #Download powershellscripts for LCS download
-iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "$DesktopPath\DownloadWithAzCopy.ps1"
+#iwr "https://raw.githubusercontent.com/oysbre/D365tools/main/DownloadWithAzCopy.ps1" -outfile "$DesktopPath\DownloadWithAzCopy.ps1"
 iwr "https://raw.githubusercontent.com/oysbre/D365tools/refs/heads/main/RestoreBACPAC.ps1" -outfile "$DesktopPath\RestoreBACPAC.ps1"
 
 # MS Visual C++ 2022 redist install/update
@@ -285,8 +281,8 @@ $vcfilename = [System.IO.Path]::GetFileName($vcurl)
 $vcfile = "$DownloadPath\$vcfilename"
 $webclient.DownloadFile($vcurl, $vcfile)
 if (test-path $vcfile){
-$vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
-$vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
+	$vcdlver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($vcfile).Fileversion
+	$vclibver = gci "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" -ea 0| get-itemproperty | where-object {$_.displayname -like "Microsoft Visual C*2022*"} |   Select-Object DisplayName, displayversion | sort-object -property displayversion -Descending | select -First 1
     
     if (($vcdlver -gt $vclibver.DisplayVersion) -or ($vclibver -eq $NULL)){
        write-host "Installing/updating MS Visual C++ 2022 ver $($vcdlver)" -ForegroundColor yellow
@@ -353,7 +349,7 @@ else
     Write-Host "preloadEnabled already active" -ForegroundColor Yellow
 }
 
-#add SQL service account to Perform volume maint task to speedup database expansion and restore of BAK files
+#Add SQL service account to Perform volume maintenancetask to speedup database expansion and restore of BAK files
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
 
@@ -457,7 +453,7 @@ Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -Like "
 Get-WmiObject Win32_UserAccount -filter "LocalAccount=True" | ? { $_.SID -eq (([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value) } | Set-LocalUser -PasswordNeverExpires 1
 
 #set powercfg
-Write-host "Set Powercfg til High Performance" -foregroundcolor yellow
+Write-host "Set Powercfg to High Performance" -foregroundcolor yellow
 & powercfg.exe -SETACTIVE 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 #Use IIS instead of IIS Express
