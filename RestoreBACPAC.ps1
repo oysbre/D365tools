@@ -36,7 +36,8 @@ $bacpacFileNameAndPath = $localfilename
 # Will be created by script. Existing files will be overwritten.
 $modelFilePath = $localdir+"BacpacModel.xml" 
 $modelFileUpdatedPath = $localdir +"UpdatedBacpacModel.xml"
-$newDBname = "importeddatabase_$((Get-Date).tostring("ddMMMyyyy"))" 
+$datestamp = $((Get-Date).tostring("ddMMMyyyy"))
+$newDBname = "importeddatabase_$datestamp" 
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
 $sqlbakPath = $localfilename
 #--------------------END Region Global variables------------------------
@@ -91,6 +92,7 @@ function Run-DBSync() {
         '-syncmode',     'fullall' 
         '-isazuresql',   'false' 
         '-sqlpwd',       $($dbaccess.SqlPwd)
+	'-logfilename', "$logdir\AxDBSync_$datestamp.log"
         )#end params
     Write-host "Syncing AxDB..."-foregroundcolor yellow
     & $SyncToolExecutable $params 2>&1 | Out-String    
