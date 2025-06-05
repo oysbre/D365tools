@@ -92,7 +92,7 @@ function Run-DBSync() {
         '-syncmode',     'fullall' 
         '-isazuresql',   'false' 
         '-sqlpwd',       $($dbaccess.SqlPwd)
-	'-logfilename', "$logdir\AxDBSync_$datestamp.log"
+	'-logfilename', "$localdir\AxDBSync_$datestamp.log"
         )#end params
     Write-host "Syncing AxDB..."-foregroundcolor yellow
     & $SyncToolExecutable $params 2>&1 | Out-String    
