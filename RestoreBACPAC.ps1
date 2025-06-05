@@ -143,7 +143,7 @@ if ($updateReg) {
 CLS
 write-host "This script will restore BACPAC, delete the existing AXDB and quit/kill VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
 if ($goaheadans -eq 'y'){
-write-host "Sync DB after BACPAC restore? [Y/N]" -foregroundcolor yellow;$syncans=read-host
+write-host "Sync DB after BACPAC restore? [Y/N] NOTE: Only choose this if package and FO version is the same as the environment the database is from!!!" -foregroundcolor yellow;$syncans=read-host
 write-host 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if ((get-packageprovider nuget) -eq $NULL){
