@@ -8,24 +8,25 @@ Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
 break
 }
 
-#------------Region custom variables----------------------------------------------#
-# In LCS > Asset library > Database backup, mark the database for restore to the left of the name and then click "Generate SAS link". 
-# Replace <SASURL> with the SAS URL between " " in variable $URL below:
+# ------------Region custom variables----------------------------------------------#
+# In LCS > Asset library > Database backup, mark the database for restore to the left of the name of the database and click "Generate SAS link". 
+# Replace <SASURL>. See step above. Paste/insert SASURL between " " in variable $SASURL below:
 
-$URL = "<SASURL>"
+$SASURL = "<SASURL>"
 
 #Define localdir/path for bacpac download
-$localdir = "D:\"  # default set to D:\. If not found, use C:\temp
+$localdir = "D:\"  # default set to D:\
 
-#---------- END custom variables -------------
+# ---------- END custom variables -------------
 
-if ($URL -eq "<SASURL>"){ write-host 'Set SASURL from LCS in variable "$URL" and try again.' -foregroundcolor yellow;pause;exit}
+if ($SASURL -eq "<SASURL>"){ write-host 'Set SASURL from LCS in variable "$SASURL" and re-run script.' -foregroundcolor yellow;pause;exit}
 if ($localfilename -eq "<local fullpathname here>"){ write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
+#If default $localdir not found, use C:\temp
 if (-not(test-path $localdir)){
 	$localdir = "c:\temp"
  	if (-not(test-path $localdir)){	
   		new-item -path $localdir -type directory -force | out-null
-    	} #end if testpath C:
+    	} #end if testpath C:\temp
 }#end if testpath 
 
 #add backslash to $localdir it not set   	
@@ -39,7 +40,7 @@ $bacpacFileNameAndPath = $localfilename
 $modelFilePath = $localdir+"BacpacModel.xml" 
 $modelFileUpdatedPath = $localdir +"UpdatedBacpacModel.xml"
 $datestamp = $((Get-Date).tostring("ddMMMyyyy"))
-$newDBname = "importeddatabase_$datestamp" 
+$newDBname = "importeddatabase_$datestamp" # Set logical name of databasefiles
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
 $sqlbakPath = $localfilename
 #--------------------END Region Global variables------------------------
@@ -108,9 +109,11 @@ function Import-Module-SQLPS {
     import-module sqlps 3>&1 | out-null
     pop-location
 }#end function Import-Module-SQLPS
+
 # ----------------End Function area -----------------
 
 # BEGIN
+
 #Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
 $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
 $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
@@ -141,10 +144,15 @@ if ($updateReg) {
     Write-host "======================================================================" -foregroundcolor Yellow;
     start-sleep -s 8
     Restart-Computer -force
-}
+}#end update registry with cipherssuites
+
 CLS
-write-host "This script will restore BACPAC, delete the existing AXDB and quit/kill VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow;$goaheadans = read-host
+write-host "#############################################################################################################" -ForegroundColor Yellow
+write-host "This script will restore BACPAC, delete the existing AXDB and quit/kill VS/SSMS applications. Continue? [Y/N]" -ForegroundColor Yellow
+write-host "#############################################################################################################" -ForegroundColor Yellow
+$goaheadans = read-host
 if ($goaheadans -eq 'y'){
+write-host 
 write-host "Sync DB after BACPAC restore? [Y/N] NOTE: Only choose this if package and FO version is the same as the environment the database is from!!!" -foregroundcolor yellow;$syncans=read-host
 write-host 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
@@ -215,12 +223,12 @@ $bacpacexepath = Get-ChildItem -Path "C:\sqlpackagecore" -Filter SqlPackage.exe 
 
  
 #download bacpac from LCS
-$statuscode = Get-UrlStatusCode -urlcheck $URL
+$statuscode = Get-UrlStatusCode -urlcheck $SASURL
 if ($statuscode -eq 200){
     #check if we got bacpac already
     if (-not(test-path $localfilename)){
         write-host "Downloading $($localfilename) from LCS/SASURL..." -ForegroundColor yellow
-        azcopy copy $URL $localfilename
+        azcopy copy $SASURL $localfilename
         unblock-file $localfilename
     }
     else {
@@ -228,12 +236,12 @@ if ($statuscode -eq 200){
         if ($bacpacans -eq "D"){
             remove-item $localfilename -force -ea 0
             write-host "Downloading BACPAC to $($localfilename) from LCS/SASURL..." -ForegroundColor yellow
-            azcopy copy $URL $localfilename
+            azcopy copy $SASURL $localfilename
             unblock-file $localfilename 
         }#end if delete existing file
     }#end else
 }#end if statuscode check
-else {write-host "Can't download BACPAC. Check SASURL. Expired? Error in URL $($url ): " $($statuscode) -ForegroundColor RED;pause;exit}
+else {write-host "Can't download BACPAC. Check SASURL. Expired? Error in URL $($SASURL ): " $($statuscode) -ForegroundColor RED;pause;exit}
 
 #Check for BACPAC
 $Latest = Get-ChildItem -Path $sqlbakPath -ea 0| Where-Object {$_.name -like "*.bacpac"} | Sort-Object LastWriteTime -Descending | Select-Object -First 1
