@@ -187,10 +187,11 @@ Import-Module-SQLPS
 if(get-module sqlps){"yes"}else{"no"}
 
 #Install/update AzCopy
+$azcopyuri = "https://aka.ms/downloadazcopy-v10-windows"
 If (-not(test-path "C:\windows\AzCopy.exe")){
     write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
     remove-item $env:temp\AzCopy.zip -force -ea 0
-    invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    invoke-WebRequest -Uri $azcopyuri -OutFile $env:temp\AzCopy.zip -UseBasicParsing
     Unblock-File $env:temp\AzCopy.zip
     Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
     Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe"
@@ -202,7 +203,7 @@ $azcopyupdate = & azcopy -h | select-string -pattern "newer version"
 if ($azcopyupdate){
     write-host "Updating AzCopy..." -ForegroundColor Yellow
     remove-item $env:temp\AzCopy.zip -force -ea 0 
-    Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
+    Invoke-WebRequest -Uri $azcopyuri -OutFile $env:temp\AzCopy.zip -UseBasicParsing
     Unblock-File $env:temp\AzCopy.zip
     Expand-Archive $env:temp\AzCopy.zip $env:temp\AzCopy -Force
     Get-ChildItem $env:temp\AzCopy\*\azcopy.exe | Move-Item -Destination "C:\windows\AzCopy.exe" -force
@@ -214,8 +215,8 @@ if ($azcopyupdate){
 #get latest SQLPACKAGE
 write-host "Installing latest SQLPACKAGE to C:\SQLPACKAGECORE..." -ForegroundColor yellow
 remove-item $env:temp\sqlpackagecore.zip -force -ea 0
-$uri = "https://aka.ms/sqlpackage-windows"
-$request = Invoke-WebRequest -Uri $uri -MaximumRedirection 2 -ErrorAction 0 -OutFile $env:temp\sqlpackagecore.zip
+$sqlpackuri = "https://aka.ms/sqlpackage-windows"
+$request = Invoke-WebRequest -Uri $sqlpackuri -MaximumRedirection 2 -ErrorAction 0 -OutFile $env:temp\sqlpackagecore.zip
 unblock-file $env:temp\sqlpackagecore.zip
 Expand-Archive $env:temp\sqlpackagecore.zip  c:\sqlpackagecore  -Force
 remove-item $env:temp\sqlpackagecore.zip -force
