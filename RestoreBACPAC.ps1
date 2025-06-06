@@ -1,4 +1,6 @@
-#Script to restore BACPAC on D365 CHE. Needs to run as admin session
+#Script to restore BACPAC on D365 CHE. 
+#To download Powershellscript to Desktop, run Powershell command below. Run with Powershell after download.
+# iwr https://raw.githubusercontent.com/oysbre/D365tools/refs/heads/main/RestoreBACPAC.ps1 -outfile "$env:USERPROFILE\Desktop\RestoreBACPAC.ps1"
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
 $arguments = "& '" + $myinvocation.mycommand.definition + "'"
