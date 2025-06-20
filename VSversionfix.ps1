@@ -1,4 +1,4 @@
-#VS version bug fix - return only digits in ToolsCommon.psm1
+#VS version bug fix - return only digits in variable $version in ToolsCommon.psm1
 #Check if PS Console is running as "elevated"
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
