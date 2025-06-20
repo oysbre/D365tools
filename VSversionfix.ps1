@@ -6,8 +6,6 @@ $toolscripts = Get-ChildItem -Path "$env:SERVICEDRIVE\DeployablePackages\**\DevT
 if ($toolscripts){
 foreach ($toolscript in $toolscripts){
 copy-item $toolscript.fullname "$($toolscript.fullname).backup" -force
-$oldcontent = '$version = ($vs2022Info.catalog.productDisplayVersion)'
-$newcontent = '$version = ($vs2022Info.catalog.productDisplayVersion) -replace "(\s.*)", ""'
 $content = ""
 $content = [System.IO.File]::ReadAllText($toolscript.fullname).Replace('$version = ($vs2022Info.catalog.productDisplayVersion)','$version = ($vs2022Info.catalog.productDisplayVersion) -replace "(\s.*)", ""')
 [System.IO.File]::WriteAllText($toolscript.fullname, $content)
