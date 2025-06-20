@@ -2,6 +2,7 @@
 #Check if PS Console is running as "elevated"
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
+#Get ToolsCommon.psm1 from DeployablePackages and add regex to strip characters after versionnumer
 $toolscripts = Get-ChildItem -Path "$env:SERVICEDRIVE\DeployablePackages\**\DevToolsService\Scripts" -recurse -Filter ToolsCommon.psm1 -ErrorAction SilentlyContinue -Force
 if ($toolscripts){
   foreach ($toolscript in $toolscripts){
