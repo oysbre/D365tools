@@ -26,7 +26,7 @@ Write-host "This script runs optimizationsettings for the CHE DEV environment." 
 write-host "Add and enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update if not found" -foregroundcolor yellow
 $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
 $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
-Write-host "Values before: $ciphers";
+#Write-host "Values before: $ciphers";
 $cipherList = $ciphers.Split(',');
 #Set strong cryptography on 64 bit .Net Framework (version 4 and above)
 Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
@@ -35,20 +35,18 @@ Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name
 $updateReg = $false;
 if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
     Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
-    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
     $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256,')
     $updateReg = $true;
 }
 if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
     Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
-    #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
     $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,')
     $updateReg = $true;
 }
 if ($updateReg) {
     Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
     $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
-    write-host "Values after: $ciphers";
+   #write-host "Values after: $ciphers";
     write-host "###########################################################################"
     Write-host "Rebooting computer in 5 sec to enable new ciphersuites. Re-run script after reboot!" -foregroundcolor Yellow;
     write-host "###########################################################################"
@@ -59,7 +57,7 @@ if ($updateReg) {
 #Install PowershellGet, Nuget and D365fo.tools
 Write-host "Installing Nuget+++..." -foregroundcolor yellow
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-Import-PackageProvider -Name NuGet 
+#Import-PackageProvider -Name NuGet 
 Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 
 if ((get-module -name PowerShellGet) -eq $null){
