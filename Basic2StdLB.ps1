@@ -4,10 +4,11 @@
 #Force Powershell to run as admin
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
 
-#Install module "AzureBasicLoadBalancerUpgrade"
+#Install/update module "AzureBasicLoadBalancerUpgrade"
 if (-not(Get-InstalledModule -name AzureBasicLoadBalancerUpgrade )){
   Install-Module -Name AzureBasicLoadBalancerUpgrade -Repository PSGallery -Force
 }
+else {Update-Module AzureBasicLoadBalancerUpgrade -force}
 
 #Customer details - fill in tenantID and subscription as minimum requirement. User must have appropriate roles and access in Entra.
 $tenantid = '<GUID>'   # Entra ID tenant GUID
