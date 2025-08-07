@@ -15,10 +15,12 @@ $subscription = '<Subscription>' # Subscription where VM's resides
 $appId = '<GUID>' #Serviceprincipal APP ID
 $secretId = '<Secret>' #Serviceprincipal secret
 
+
 #Static details
 $outboundRuleName= "http-outbound-rule"
 
 ## BEGIN ##
+import-Module -Name AzureBasicLoadBalancerUpgrade 
 write-host "Connect to Azure with Serviceprincipal or EntraID user? S/E" -foregroundcolor Yellow ;$readansazure=read-host
 if ($readansazure -eq "S"){
 $SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
