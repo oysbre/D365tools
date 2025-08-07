@@ -19,18 +19,16 @@ $secretId = '<Secret>' #Serviceprincipal secret
 $outboundRuleName= "http-outbound-rule"
 
 ## BEGIN ##
-#Import-Module az
-
-write-host "Connect to Azure with Serviceprincipal or Regular EntraID user? S/R" -foregroundcolor Yellow ;$readansazure=read-host
+write-host "Connect to Azure with Serviceprincipal or EntraID user? S/E" -foregroundcolor Yellow ;$readansazure=read-host
 if ($readansazure -eq "S"){
 $SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
 $pscredential = New-Object -TypeName System.Management.Automation.PSCredential @($appId, $SecureStringPwd)
 Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $tenantid -Subscription $subscription # -debug
 }
-elseif ($readansazure -eq "R"){
+elseif ($readansazure -eq "E"){
 Connect-AzAccount -Tenant $tenantid -Subscription $subscription # -debug
 }
-else {write-host "Choose R or S as valid input. Run script again." -foregroundcolor RED;pause;exit}
+else {write-host "Choose R or E as valid input. Run script again." -foregroundcolor RED;pause;exit}
 
 #Create logdir for migration
 $LBlog = "c:\LBlog"
