@@ -20,9 +20,11 @@ $appId = '<GUID>' #Serviceprincipal APP ID
 $secretId = '<Secret>' #Serviceprincipal secret
 
 
+
 #Static details
 $outboundRuleName= "http-outbound-rule"
-
+if ($tenantid -eq '<GUID>'){write-host 'Provide Entra tenantID in variable $tenantid above and rerun script' -foregroundcolor CYAN}
+if ($subscription -eq '<Subscription>'){write-host 'Provide Entra tenantID in variable $subscription above and rerun script' -foregroundcolor CYAN}
 ## BEGIN ##
 import-Module -Name AzureBasicLoadBalancerUpgrade 
 write-host "This script will migrate VMs with Basic LB to Standard LB" -foregroundcolor yellow
