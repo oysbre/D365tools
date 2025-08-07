@@ -1,5 +1,6 @@
 #Migrate VM loadbalancer SKU from Basic to Standard
 #https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell
+#To test with one VM, provide VM name in line 52 below and uncomment the line
 
 #Force Powershell to run as admin
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
@@ -24,6 +25,7 @@ $outboundRuleName= "http-outbound-rule"
 
 ## BEGIN ##
 import-Module -Name AzureBasicLoadBalancerUpgrade 
+write-host "This script will migrate VMs with Basic LB to Standard LB" -foregroundcolor yellow
 write-host "Connect to Azure with Serviceprincipal or EntraID user? S/E" -foregroundcolor Yellow ;$readansazure=read-host
 if ($readansazure -eq "S"){
 $SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
@@ -47,6 +49,8 @@ $VMs = get-azvm
 
 if ($VMs){
     foreach ($vm in $VMs){
+        #to test with one VM, provide VM name below and uncomment line
+        #if ($vm.name -ne '<VM name>'){continue}
         $resourceGroupName = ""
         $resourceGroupName = $($vm.resourcegroupname)
         #Check Loadbalancer SKU of the VM is Basic or not.
