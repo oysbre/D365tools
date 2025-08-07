@@ -55,7 +55,7 @@ if ($vms -is [array]){
             #Migrate Basic to Standard IP
             write-host "Migrating LB SKU to Standard for VM $($vm.name)..." -ForegroundColor yellow
             $loadBalancerName = (get-azloadbalancer -resourcegroupname $($vm.resourcegroupname)).Name
-            Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $resourceGroupName -BasicLoadBalancerName $loadBalancerName -FollowLog -RecoveryBackupPath $LBlog -skipDowntimeWarning
+            Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $resourceGroupName -BasicLoadBalancerName $loadBalancerName -FollowLog -RecoveryBackupPath $LBlog -skipDowntimeWarning -force
             
             #Backendpool
             $backendPoolName = "$($vm.name)-backend-pool"
