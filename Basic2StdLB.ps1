@@ -20,10 +20,11 @@ $outboundRuleName= "http-outbound-rule"
 
 ## BEGIN ##
 #Import-Module az
-$SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
-$pscredential = New-Object -TypeName System.Management.Automation.PSCredential @($appId, $SecureStringPwd)
+
 write-host "Connect to Azure with Serviceprincipal or Regular EntraID user? S/R" -foregroundcolor Yellow ;$readansazure=read-host
 if ($readansazure -eq "S"){
+$SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
+$pscredential = New-Object -TypeName System.Management.Automation.PSCredential @($appId, $SecureStringPwd)
 Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $tenantid -Subscription $subscription # -debug
 }
 elseif ($readansazure -eq "R"){
