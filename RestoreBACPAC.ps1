@@ -20,7 +20,7 @@ $localdir = "D:\"  # default set to D:\
 # ---------- END custom variables -------------
 
 if ($SASURL -eq "<SASURL>"){ write-host 'Set SASURL from LCS in variable "$SASURL" and re-run script.' -foregroundcolor yellow;pause;exit}
-if ($localfilename -eq "<local fullpathname here>"){ write-host "Set local pathname with filename aka: D:\dev.bacpac in variable '$localfilename'" -foregroundcolor yellow;pause;exit}
+
 #If default $localdir not found, use C:\temp
 if (-not(test-path $localdir)){
 	$localdir = "c:\temp"
