@@ -10,7 +10,7 @@ Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 if (-not(Get-InstalledModule -name AzureBasicLoadBalancerUpgrade )){
   Install-Module -Name AzureBasicLoadBalancerUpgrade -Repository PSGallery -Force
 }
-else {Update-Module AzureBasicLoadBalancerUpgrade -force}
+else {Update-Module AzureBasicLoadBalancerUpgrade}
 
 #Customer details - fill in tenantID and subscription as minimum requirement. User must have appropriate roles and access in Entra.
 $tenantid = '<GUID>'   # Entra ID tenant GUID
