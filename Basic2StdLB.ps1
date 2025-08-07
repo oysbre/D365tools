@@ -4,6 +4,8 @@
 #Force Powershell to run as admin
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
 
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
 #Install/update module "AzureBasicLoadBalancerUpgrade"
 if (-not(Get-InstalledModule -name AzureBasicLoadBalancerUpgrade )){
   Install-Module -Name AzureBasicLoadBalancerUpgrade -Repository PSGallery -Force
