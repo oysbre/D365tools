@@ -42,11 +42,11 @@ if (-not(test-path $LBlog)){
 }
 
 #Get all VMs
-$vms = @()
-$vms = get-azvm
+$VMs = @()
+$VMs = get-azvm
 
-if ($vms -is [array]){
-    foreach ($vm in $vms){
+if ($VMs){
+    foreach ($vm in $VMs){
         $resourceGroupName = ""
         $resourceGroupName = $($vm.resourcegroupname)
         #Check Loadbalancer SKU of the VM is Basic or not.
@@ -73,4 +73,4 @@ if ($vms -is [array]){
                         
         }#end if basic LB sku
     }#end foreach
-}#end if array
+}#end if $VMs
