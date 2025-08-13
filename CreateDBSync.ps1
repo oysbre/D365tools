@@ -38,6 +38,7 @@ else {
 #Herestrings for Powershellscripts
 $dbsynccmd = @'
 #AX DBsync
+$servicelist = @("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")
 function Run-DBSync() {
     write-host "Running DBsync..." -foregroundcolor yellow
     $aosPath = "{0}\AOSService" -f $env:servicedrive 
@@ -74,7 +75,7 @@ foreach ($service in $servicelist){
     }#end if $serviceobject
 }#end foreach service
 }#end function startservices
-
+write-host "Starting sync of AXDB. Please wait..." -foregroundcolor yellow
 write-host "Stopping AX services..." -foregroundcolor yellow
 @("MR2012ProcessService","DynamicsAxBatch","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe","W3SVC")| foreach {stop-service -name "$_" -force}
 
@@ -82,6 +83,9 @@ Run-DBSync
 startservices
 Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
 Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
+write-host "Sync of AXDB complete." -foregroundcolor green
+start-sleep -s 5
+pause
 '@
 
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
