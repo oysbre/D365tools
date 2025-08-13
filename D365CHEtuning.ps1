@@ -351,6 +351,13 @@ else
     Write-Host "preloadEnabled already active" -ForegroundColor Yellow
 }
 
+$appinitstat = (Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -location 'AOSService' -filter "system.webServer/applicationInitialization" -name "doAppInitAfterRestart" -EA 0).value
+if ($appinitstat -ne $true){
+Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -location 'AOSService' -filter "system.webServer/applicationInitialization" -name "doAppInitAfterRestart" -value "True"
+Add-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST/AOSService'  -filter "system.webServer/applicationInitialization" -name "." -value @{initializationPage='/?mi=DefaultDashboard'}
+}
+
+
 #Add SQL service account to Perform volume maintenancetask to speedup database expansion and restore of BAK files
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
 $accountToAdd = $svr.serviceaccount
