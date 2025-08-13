@@ -312,7 +312,7 @@ Clear-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.
 #Enable IIS Application Initialization
 #Ensure Application Initialization is available
 $webAppInit = Get-WindowsFeature -Name "Web-AppInit"
-if(!$webAppInit.Installed) 
+if(-not($webAppInit.Installed)) 
 {
     Write-Host "$($webAppInit.DisplayName) not present, installing"
     Install-WindowsFeature $webAppInit -ErrorAction Stop
@@ -322,7 +322,7 @@ else {  Write-Host "$($webAppInit.DisplayName) was already installed" -Foregroun
 
 #Fetch the site
 $site = Get-Website -Name $siteName
-if(!$site) {
+if(-not($site)) {
     Write-Host "Site $siteName could not be found, exiting!" -ForegroundColor Yellow
     Break
 }
@@ -340,7 +340,7 @@ else {
     Write-Host "startMode was already set to $($appPool.startMode) for the application pool $($site.applicationPool)" -ForegroundColor Yellow
 }
 
-if(!(Get-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled).Value) 
+if(-not(Get-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled).Value) 
 {
     Write-Host "preloadEnabled is inactive, activating"
     Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled -Value True
