@@ -82,7 +82,7 @@ write-host "Stopping AX services..." -foregroundcolor yellow
 Run-DBSync
 startservices
 Get-iisapppool | Where {$_.State -eq "Stopped"} | Start-WebAppPool
-Get-iissite | Where {$_.State -eq "Stopped"} | Start-WebSite
+Get-iissite | Where {$_.State -eq "Stopped" -and $_.id -ne 1} | Start-WebSite
 write-host "Sync of AXDB complete." -foregroundcolor green
 start-sleep -s 5
 pause
