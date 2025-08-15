@@ -23,13 +23,14 @@ $secretId = '<Secret>' #Serviceprincipal secret
 
 #Static details
 $outboundRuleName= "http-outbound-rule"
-if ($tenantid -eq '<GUID>'){write-host 'Provide Entra tenantID in variable $tenantid above and rerun script' -foregroundcolor CYAN}
-if ($subscription -eq '<Subscription>'){write-host 'Provide subscriptionID where the VM's reside in variable $subscription above and rerun script' -foregroundcolor CYAN}
+if ($tenantid -eq '<GUID>'){write-host 'Provide Entra tenantID in variable $tenantid above and rerun script' -foregroundcolor CYAN;pause;exit}
+if ($subscription -eq '<Subscription>'){write-host 'Provide subscriptionID where the VM's reside in variable $subscription above and rerun script' -foregroundcolor CYAN;pause;exit}
 ## BEGIN ##
 import-Module -Name AzureBasicLoadBalancerUpgrade 
 write-host "This script will migrate VMs with Basic LB to Standard LB" -foregroundcolor yellow
 write-host "Connect to Azure with Serviceprincipal or EntraID user? S/E" -foregroundcolor Yellow ;$readansazure=read-host
 if ($readansazure -eq "S"){
+if ($appId -eq '<GUID>'){write-host 'Provide ApplicationID in variable $appId above and rerun script' -foregroundcolor CYAN;pause;exit}
 $SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
 $pscredential = New-Object -TypeName System.Management.Automation.PSCredential @($appId, $SecureStringPwd)
 Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $tenantid -Subscription $subscription # -debug
