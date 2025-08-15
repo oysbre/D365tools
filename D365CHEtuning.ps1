@@ -296,67 +296,8 @@ if (test-path $vcfile){
 }#end if VcDlfile check
 else {write-host "MS Visual C++ download not found in $($DownloadPath). Newer ServiceUpdates deploy may fail." -ForegroundColor red;}
 
-#Set AppPool settings for AOSERVICE
-Import-Module WebAdministration
-$siteName = "AOSSERVICE"
-$AppPool = Get-Item IIS:\AppPools\AOSSERVICE
-if ($AppPool){
-#disable timeout
-Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name processModel.idleTimeout -value ( [TimeSpan]::FromMinutes(0))
-#disable the regular time of 1740 minutes
-Set-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.time -Value "00:00:00"
-#Clear any scheduled restart times
-Clear-ItemProperty ("IIS:\AppPools\AOSSERVICE") -Name Recycling.periodicRestart.schedule
-}
-
-#Enable IIS Application Initialization
-#Ensure Application Initialization is available
-$webAppInit = Get-WindowsFeature -Name "Web-AppInit"
-if(-not($webAppInit.Installed)) 
-{
-    Write-Host "$($webAppInit.DisplayName) not present, installing"
-    Install-WindowsFeature $webAppInit -ErrorAction Stop
-    Write-Host "`nInstalled $($webAppInit.DisplayName)`n" -ForegroundColor Green
-}
-else {  Write-Host "$($webAppInit.DisplayName) was already installed" -ForegroundColor Yellow }
-
-#Fetch the site
-$site = Get-Website -Name $siteName
-if(-not($site)) {
-    Write-Host "Site $siteName could not be found, exiting!" -ForegroundColor Yellow
-    Break
-}
-
-#Fetch the application pool
-$appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
-#Set up AlwaysRunning
-if($appPool.startMode -ne "AlwaysRunning") {
-    Write-Host "startMode is set to $($appPool.startMode ), activating AlwaysRunning"
-    $appPool | Set-ItemProperty -name "startMode" -Value "AlwaysRunning"
-    $appPool = Get-ChildItem IIS:\AppPools\ | Where-Object { $_.Name -eq $site.applicationPool }
-    Write-Host "startMode is now set to $($appPool.startMode)`n" -ForegroundColor Green
-} 
-else {
-    Write-Host "startMode was already set to $($appPool.startMode) for the application pool $($site.applicationPool)" -ForegroundColor Yellow
-}
-
-if(-not(Get-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled).Value) 
-{
-    Write-Host "preloadEnabled is inactive, activating"
-    Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled -Value True
-    Write-Host "preloadEnabled is now set to $((Get-ItemProperty "IIS:\Sites\$siteName" -Name applicationDefaults.preloadEnabled).Value)" -ForegroundColor Green
-} 
-else
-{
-    Write-Host "preloadEnabled already active" -ForegroundColor Yellow
-}
-
-$appinitstat = (Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -location 'AOSService' -filter "system.webServer/applicationInitialization" -name "doAppInitAfterRestart" -EA 0).value
-if ($appinitstat -ne $true){
-Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -location 'AOSService' -filter "system.webServer/applicationInitialization" -name "doAppInitAfterRestart" -value "True"
-Add-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST/AOSService'  -filter "system.webServer/applicationInitialization" -name "." -value @{initializationPage='/?mi=DefaultDashboard'}
-}
-
+#Enable IISPreload
+Enable-D365IISPreload
 
 #Add SQL service account to Perform volume maintenancetask to speedup database expansion and restore of BAK files
 $svr = new-object('Microsoft.SqlServer.Management.Smo.Server') $env:computername
