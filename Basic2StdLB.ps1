@@ -26,7 +26,11 @@ if ($subscription -eq '<Subscription>'){write-host 'Provide subscriptionID where
 ## BEGIN ##
 import-Module -Name AzureBasicLoadBalancerUpgrade 
 write-host "This script will migrate VMs with Basic LB to Standard LB" -foregroundcolor yellow
-write-host "Connect to Azure with Serviceprincipal or EntraID user? S/E" -foregroundcolor Yellow ;$readansazure=read-host
+write-host "Connect to Azure with Serviceprincipal or EntraID user? [S/E]" -foregroundcolor Yellow ;$readansazure=read-host
+while ($readansazure -ne 'S' -and $readansazure -ne 'E')
+{
+	$readansazure = Read-Host
+}
 if ($readansazure -eq "S"){
 if ($appId -eq '<GUID>'){write-host 'Provide ApplicationID in variable $appId above and rerun script' -foregroundcolor CYAN;pause;exit}
 $SecureStringPwd = $secretId | ConvertTo-SecureString -AsPlainText -Force
@@ -36,7 +40,7 @@ Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $tenantid 
 elseif ($readansazure -eq "E"){
 Connect-AzAccount -Tenant $tenantid -Subscription $subscription # -debug
 }
-else {write-host "Choose R or E as valid input. Run script again." -foregroundcolor RED;pause;exit}
+
 
 #Create logdir for migration
 $LBlog = "c:\LBlog"
