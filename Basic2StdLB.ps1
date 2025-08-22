@@ -22,7 +22,7 @@ else {Update-Module AzureBasicLoadBalancerUpgrade}
 #Static details
 $outboundRuleName= "http-outbound-rule"
 if ($tenantid -eq '<GUID>'){write-host 'Provide Entra tenantID in variable $tenantid above and rerun script' -foregroundcolor CYAN;pause;exit}
-if ($subscription -eq '<Subscription>'){write-host 'Provide subscriptionID where the VM's reside in variable $subscription above and rerun script' -foregroundcolor CYAN;pause;exit}
+if ($subscription -eq '<Subscription>'){write-host 'Provide subscriptionID where the VM reside in variable $subscription above and rerun script' -foregroundcolor CYAN;pause;exit}
 ## BEGIN ##
 import-Module -Name AzureBasicLoadBalancerUpgrade 
 write-host "This script will migrate VMs with Basic LB to Standard LB" -foregroundcolor yellow
