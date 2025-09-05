@@ -1,6 +1,6 @@
 #Migrate VM loadbalancer SKU from Basic to Standard
 #https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell
-#To test with one VM, provide VM name in line 55 below and uncomment the line
+#To test with one VM, provide VM name in line 58 (replace <VM name>) below and uncomment the line (remove #)
 
 #Force Powershell to run as admin
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
