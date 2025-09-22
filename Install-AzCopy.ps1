@@ -4,7 +4,7 @@ If (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 }
 function InstallUpgrade-AzCopy {
   $ErrorActionPreference = "SilentlyContinue"; #This will hide errors
-  If (-not(test-path "$env:systemroot\AzCopy.exe")) -or ((& azcopy -h | select-string -pattern "newer version").length -gt 0){
+  If (-not(test-path "$env:systemroot\AzCopy.exe") -or ((& azcopy -h | select-string -pattern "newer version").length -gt 0)){
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $env:temp\AzCopy.zip -UseBasicParsing
     if (test-path $env:temp\AzCopy.zip){
@@ -16,5 +16,5 @@ function InstallUpgrade-AzCopy {
     }#end if testpath
   }#end if
   $ErrorActionPreference = "Continue"; #Turning errors back on
-#End function InstallUpgrade-AzCopy
+}#End function InstallUpgrade-AzCopy
 InstallUpgrade-AzCopy
