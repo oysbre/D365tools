@@ -175,10 +175,17 @@ function Set-RegistryValueForAllUsers {
 #region Install tools
 if ($env:computername -notlike "*FOCO*"){
 	Add-D365WindowsDefenderRules
-	Add-MpPreference -ExclusionProcess "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-	Add-MpPreference -ExclusionProcess "C:\DynamicsTools\7za.exe"
-	Add-MpPreference -ExclusionPath "C:\DynamicsTools"
+
 }
+#Add exclusions to Defender
+Add-MpPreference -ExclusionProcess "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+Add-MpPreference -ExclusionProcess "C:\DynamicsTools\7za.exe"
+Add-MpPreference -ExclusionPath "C:\DynamicsTools"
+Add-MpPreference -ExclusionExtension "mdf"
+Add-MpPreference -ExclusionExtension "ndf"
+Add-MpPreference -ExclusionExtension "ldf"
+Add-MpPreference -ExclusionExtension "log"
+Add-MpPreference -ExclusionExtension "xml"
 
 Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
