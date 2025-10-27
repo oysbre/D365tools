@@ -246,6 +246,7 @@ Run-DBSync
 $unsetcmd = @'
 #Unset ReadOnly flag on multiple fileextensions in Powershell (run as Admin):
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break}
+write-host "Removing READONLY flag on file extensions RDL, LOG, XML and TXT in AosService\PackagesLocalDirectory..." -foregroundcolor yellow
 @("*.rdl","*.log","*.xml","*.txt") | foreach {Get-ChildItem -Path "$env:servicedrive\AosService\PackagesLocalDirectory\*" -Recurse -Filter "$_" | foreach { $_.IsReadOnly=$False }}
 '@
 
