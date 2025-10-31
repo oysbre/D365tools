@@ -325,7 +325,7 @@ WAITFOR DELAY '00:00:10';
 ALTER DATABASE [AXDB_org] SET MULTI_USER;
 END
 "@
-$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
+$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 -ErrorAction Stop
 #>
 
 #query check if AXDB exists and drop it
@@ -349,7 +349,7 @@ WAITFOR DELAY '00:00:03';
 END
 "@
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
-$dbcheckaxdb = Invoke-SqlCmd -query $sqlDropAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90
+$dbcheckaxdb = Invoke-SqlCmd -query $sqlDropAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90 -ErrorAction Stop
 
 #Restore BACPAC 
 & "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
@@ -392,7 +392,7 @@ WAITFOR DELAY '00:00:10';
 ALTER DATABASE [AXDB] SET MULTI_USER;
 "@
 
-$renamenewaxdb = Invoke-SqlCmd -Query $sqlRenametoAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90
+$renamenewaxdb = Invoke-SqlCmd -Query $sqlRenametoAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90 -ErrorAction Stop
 write-host "Renamed $($newDBname) to AXDB." -ForegroundColor green
 start-sleep -s 2
 
@@ -867,7 +867,7 @@ $simplerecovery.query = @"
 ALTER DATABASE AXDB SET RECOVERY SIMPLE
 GO
 "@
-$simplerec = Invoke-SqlCmd -Query $simplerecovery.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 720
+$simplerec = Invoke-SqlCmd -Query $simplerecovery.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 720
 
 #Disable metadata cache warmup
 write-host "Disable metadata cache warmup..." -foregroundcolor yellow
@@ -881,7 +881,7 @@ $disablemetadatacache = @{
 $disablemetadatacache.query = @"
 UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 "@
-$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacache.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 720
+$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacache.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 30
 
 #sync DB
 if ($syncans -eq 'Y'){
