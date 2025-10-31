@@ -1,4 +1,4 @@
-#Script to restore BACPAC on D365 CHE. 
+sting#Script to restore BACPAC on D365 CHE. 
 #Run Powershell command below on CHE to download this Powershellscript to Desktop. Edit script and fill in SASURL variable with BACPAC link from LCS. Run with Powershell when done.
 # iwr https://raw.githubusercontent.com/oysbre/D365tools/refs/heads/main/RestoreBACPAC.ps1 -outfile "$env:USERPROFILE\Desktop\RestoreBACPAC.ps1"
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {   
@@ -257,7 +257,7 @@ if ($statuscode -eq 200){
         unblock-file $localfilename
     }
     else {
-        write-host "Already found bacpac $($localfilename). To use this BACPAC, press Enter. Download and overwrite existing file? Press letter D" -ForegroundColor Cyan;$bacpacans=read-host
+        write-host "Already found bacpac $($localfilename). To use existing BACPAC file, press Enter. Else to download and overwrite existing file, press letter D" -ForegroundColor Cyan;$bacpacans=read-host
         if ($bacpacans -eq "D"){
             remove-item $localfilename -force -ea 0
             write-host "Downloading BACPAC to $($localfilename) from LCS/SASURL..." -ForegroundColor yellow
