@@ -44,7 +44,36 @@ $newDBname = "importeddatabase_$datestamp" # Set logical name of databasefiles
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
 $sqlbakPath = $localfilename
 #--------------------END Region Global variables------------------------
+#Install PSmodule SQLserver
+if((Get-Module sqlserver -ListAvailable) -eq $null){
+    Write-host "Installing PSmodule sqlserver..." -foregroundcolor yellow
+    Install-Module sqlserver -Force -AllowClobber
+}
 
+#remove SQLPS module from this session - obselete/deprecated
+Remove-Module SQLPS -ea 0
+function Import-Module-SQLServer {
+push-location
+import-module sqlserver 3>&1 | out-null
+pop-location
+}#end function Import-Module-SQLServer
+
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
+if(get-module sqlserver){"yes"}else{"no"}
+Import-Module-SQLServer
+
+#get SQL version and set parameter trustservercert
+$inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
+foreach ($i in $inst)
+{
+   $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i
+   $sqlver += (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").Version
+}
+$sqlver = $sqlver | sort desc
+if ($sqlver -ge 16){
+$trustservercert = 1
+}
 #------------------  FUNCTIONS -------------------------------
 function Get-UrlStatusCode([string] $Urlcheck) {
     try {  (Invoke-WebRequest -Uri $Urlcheck -UseBasicParsing -DisableKeepAlive -method head).StatusCode }
@@ -100,15 +129,6 @@ function Run-DBSync() {
     Write-host "Syncing AxDB..."-foregroundcolor yellow
     & $SyncToolExecutable $params 2>&1 | Out-String    
 }#end function DB-sync
-
-function Import-Module-SQLPS {
-    #pushd and popd to avoid import from changing the current directory (ref: http://stackoverflow.com/questions/12915299/sql-server-2012-sqlps-module-changing-current-location-automatically)
-    #3>&1 puts warning stream to standard output stream (see https://connect.microsoft.com/PowerShell/feedback/details/297055/capture-warning-verbose-debug-and-host-output-via-alternate-streams)
-    #out-null blocks that output, so we don't see the annoying warnings described here: https://www.codykonior.com/2015/05/30/whats-wrong-with-sqlps/
-    push-location
-    import-module sqlps 3>&1 | out-null
-    pop-location
-}#end function Import-Module-SQLPS
 
 # ----------------End Function area -----------------
 
@@ -180,11 +200,6 @@ else {
     }
     else {write-host "Can't connect to github to fetch D365fo.tools" -ForegroundColor CYAN }
 }#end install/update d365fo.tools
-
-#use SQLPS module
-if(get-module sqlps){"yes"}else{"no"}
-Import-Module-SQLPS
-if(get-module sqlps){"yes"}else{"no"}
 
 #Install/update AzCopy
 $azcopyuri = "https://aka.ms/downloadazcopy-v10-windows"
