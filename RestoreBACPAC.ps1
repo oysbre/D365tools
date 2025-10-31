@@ -844,18 +844,32 @@ $ssms = taskkill /im ssms.exe /f | out-null
 
 #set AXDB to simple recovery mode
 write-host "Set AxDB to simple recovery mode..." -foregroundcolor yellow
-$simplerecoveryQ = @"
+$simplerecovery = @{
+'Database' = 'AXDB'
+'serverinstance' = 'localhost'
+'querytimeout' = 0
+'query' = ""
+'trustservercertificate' = $trustservercert
+}
+$simplerecovery.query = @"
 ALTER DATABASE AXDB SET RECOVERY SIMPLE
 GO
 "@
-$simplerec = Invoke-SqlCmd -Query $simplerecoveryQ -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
+$simplerec = Invoke-SqlCmd -Query $simplerecovery
 
 #Disable metadata cache warmup
 write-host "Disable metadata cache warmup..." -foregroundcolor yellow
-$disablemetadatacacheyQ = @"
+$disablemetadatacache = @{
+'Database' = 'AXDB'
+'serverinstance' = 'localhost'
+'querytimeout' = 0
+'query' = ""
+'trustservercertificate' = $trustservercert
+}
+$disablemetadatacache.query = @"
 UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 "@
-$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacacheyQ -Database AXDB -ServerInstance localhost -ErrorAction continue -querytimeout 90 
+$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacacheyQ
 
 #sync DB
 if ($syncans -eq 'Y'){
