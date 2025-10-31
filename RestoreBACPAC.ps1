@@ -1,6 +1,8 @@
-sting#Script to restore BACPAC on D365 CHE. 
-#Run Powershell command below on CHE to download this Powershellscript to Desktop. Edit script and fill in SASURL variable with BACPAC link from LCS. Run with Powershell when done.
-# iwr https://raw.githubusercontent.com/oysbre/D365tools/refs/heads/main/RestoreBACPAC.ps1 -outfile "$env:USERPROFILE\Desktop\RestoreBACPAC.ps1"
+<#Script to restore BACPAC on D365 CHE. 
+Run Powershell command below on CHE to download this Powershellscript to Desktop. Edit script and fill in variable $SASURL with BACPAC link from LCS. Run with Powershell when done.
+iwr https://raw.githubusercontent.com/oysbre/D365tools/refs/heads/main/RestoreBACPAC.ps1 -outfile "$env:USERPROFILE\Desktop\RestoreBACPAC.ps1"
+#>
+#Force PS session as admin
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
 $arguments = "& '" + $myinvocation.mycommand.definition + "'"
@@ -9,7 +11,7 @@ break
 }
 
 # ------------Region custom variables----------------------------------------------#
-# In LCS > Asset library > Database backup, mark the database for restore to the left of the name of the database and click "Generate SAS link". 
+# In LCS > Asset library > Database backup, mark the database for restore to the left of the name of the database and click "Generate SAS link" that appear. 
 # Replace <SASURL>. See step above. Paste/insert SASURL between " " in variable $SASURL below:
 
 $SASURL = "<SASURL>"
@@ -59,8 +61,8 @@ else {
 		Write-host "Updating PSmodule SQLserver..." -foregroundcolor yellow
 		Update-Module sqlserver -Force
 	}
-}
-#End install/update PSmodule SQLserver
+} #End install/update PSmodule SQLserver
+
 function Import-Module-SQLServer {
 push-location
 import-module sqlserver 3>&1 | out-null
