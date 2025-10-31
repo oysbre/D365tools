@@ -299,6 +299,7 @@ $sqlDropAXDBorg = @{
 'querytimeout' = 90
 'query' = ''
 'trustservercertificate' = $trustservercert
+'encrypt' = 'Optional'
 }
 $sqlDropAXDBorg.query = @"
 IF DB_ID('AXDB_org') IS NOT NULL
@@ -311,7 +312,7 @@ DROP DATABASE axdb_org;
 END
 "@
 write-host "Dropping AXDB_org if exists..." -ForegroundColor yellow
-$dbcheckpre = Invoke-SqlCmd -Query $sqlDropAXDBorg
+$dbcheckpre = Invoke-SqlCmd -query $sqlDropAXDBorg.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90
 
 <#query rename existing AXDB
 write-host "Renaming existing AXDB to AXDB_org and $($newdbname) to AXDB..." -ForegroundColor yellow
@@ -348,7 +349,7 @@ WAITFOR DELAY '00:00:03';
 END
 "@
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
-$dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDB
+$dbcheckaxdb = Invoke-SqlCmd -query $sqlDropAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90
 
 #Restore BACPAC 
 & "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
@@ -370,7 +371,7 @@ SELECT 'Oh no! Something bad just happened'
 END
 "@
 
-$newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabase
+$newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabase.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90
 if ($newdbcheck.column1 -match "Something"){
 write-host "Database $($newDBname) not restored ok. Restore failed? Not enough diskspace? Check errors and try again." -ForegroundColor RED;pause;exit
 }
@@ -391,7 +392,7 @@ WAITFOR DELAY '00:00:10';
 ALTER DATABASE [AXDB] SET MULTI_USER;
 "@
 
-$renamenewaxdb = Invoke-SqlCmd -Query $sqlRenametoAXDB 
+$renamenewaxdb = Invoke-SqlCmd -Query $sqlRenametoAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90
 write-host "Renamed $($newDBname) to AXDB." -ForegroundColor green
 start-sleep -s 2
 
@@ -840,7 +841,7 @@ GO
 "@
 
 write-host "Retail fix running. Takes about 7-8 minutes. Please wait..." -ForegroundColor yellow
-Invoke-SqlCmd -Query $sqlRetailcleanup 
+Invoke-SqlCmd -Query $sqlRetailcleanup.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 720
 write-host "Done fixing Retail settings." -ForegroundColor green
 
 
@@ -866,7 +867,7 @@ $simplerecovery.query = @"
 ALTER DATABASE AXDB SET RECOVERY SIMPLE
 GO
 "@
-$simplerec = Invoke-SqlCmd -Query $simplerecovery
+$simplerec = Invoke-SqlCmd -Query $simplerecovery.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 720
 
 #Disable metadata cache warmup
 write-host "Disable metadata cache warmup..." -foregroundcolor yellow
@@ -880,7 +881,7 @@ $disablemetadatacache = @{
 $disablemetadatacache.query = @"
 UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0
 "@
-$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacacheyQ
+$disablemetadatacachey = Invoke-SqlCmd -Query $disablemetadatacache.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 720
 
 #sync DB
 if ($syncans -eq 'Y'){
