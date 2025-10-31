@@ -44,14 +44,15 @@ $newDBname = "importeddatabase_$datestamp" # Set logical name of databasefiles
 $servicelist = @("DynamicsAxBatch","MR2012ProcessService","W3SVC","Microsoft.Dynamics.AX.Framework.Tools.DMF.SSISHelperService.exe")
 $sqlbakPath = $localfilename
 #--------------------END Region Global variables------------------------
+#remove SQLPS module from this session - obselete/deprecated
+Remove-Module SQLPS -ea 0
+
 #Install PSmodule SQLserver
 if((Get-Module sqlserver -ListAvailable) -eq $null){
     Write-host "Installing PSmodule sqlserver..." -foregroundcolor yellow
     Install-Module sqlserver -Force -AllowClobber
 }
 
-#remove SQLPS module from this session - obselete/deprecated
-Remove-Module SQLPS -ea 0
 function Import-Module-SQLServer {
 push-location
 import-module sqlserver 3>&1 | out-null
