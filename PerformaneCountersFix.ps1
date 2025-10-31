@@ -1,4 +1,8 @@
-# fix "The requested Performance Counter is not a custom counter, it has to be initialized as ReadOnly" error msg in FO
+<#
+fix "The requested Performance Counter is not a custom counter, it has to be initialized as ReadOnly" error msg in FO
+To dowload, copy the line below in Powershell console and run the script from Desktop.
+iwr https://raw.githubusercontent.com/oysbre/D365tools/main/PerformaneCountersFix.ps1 -outfile "$env:USERPROFILE\Desktop\PerformaneCountersFix.ps1"
+#>
 
 $AOSDirectory = "$env:servicedrive\AOSService\PackagesLocalDirectory"
 $AOSBinDirectory = $AOSDirectory + '\bin'
