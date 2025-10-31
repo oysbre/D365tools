@@ -282,7 +282,14 @@ write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yel
 stopservices
 
 #drop AXDB_org if exists
-$sqlDropAXDB_orgQ= @"
+$sqlDropAXDBorg = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 90
+'query' = ''
+'trustservercertificate' = $trustservercert
+}
+$sqlDropAXDBorg.query = @"
 IF DB_ID('AXDB_org') IS NOT NULL
 BEGIN
 ALTER DATABASE [AXDB_org] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -293,7 +300,7 @@ DROP DATABASE axdb_org;
 END
 "@
 write-host "Dropping AXDB_org if exists..." -ForegroundColor yellow
-$dbcheckpre = Invoke-SqlCmd -Query $sqlDropAXDB_orgQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90
+$dbcheckpre = Invoke-SqlCmd -Query $sqlDropAXDBorg
 
 <#query rename existing AXDB
 write-host "Renaming existing AXDB to AXDB_org and $($newdbname) to AXDB..." -ForegroundColor yellow
@@ -310,7 +317,15 @@ $renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -Serve
 #>
 
 #query check if AXDB exists and drop it
-$sqlDropAXDBQ= @"
+$sqlDropAXDB = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 90
+'query' = ''
+'trustservercertificate' = $trustservercert
+}
+
+$sqlDropAXDB.query = @"
 IF DB_ID('AXDB') IS NOT NULL
 BEGIN
 ALTER DATABASE [AXDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -322,7 +337,7 @@ WAITFOR DELAY '00:00:03';
 END
 "@
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
-$dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDBQ -Database master -ServerInstance localhost -ErrorAction Stop -querytimeout 90
+$dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDB
 
 #Restore BACPAC 
 & "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml"
@@ -330,20 +345,54 @@ $dbcheckaxdb = Invoke-SqlCmd -Query $sqlDropAXDBQ -Database master -ServerInstan
 start-sleep -s 2
 
 #query check if new DB exists
-$sqlCheckNewdatabaseQ= @"
+$sqlCheckNewdatabase = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 90
+'query' = ''
+'trustservercertificate' = $trustservercert
+}
+$sqlCheckNewdatabase.query= @"
 IF DB_ID('$newDBname') IS NULL
 BEGIN
 SELECT 'Oh no! Something bad just happened'
 END
 "@
 
-$newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabaseQ -Database master -ServerInstance localhost -ErrorAction Continue -querytimeout 90 
+$newdbcheck = Invoke-SqlCmd -Query $sqlCheckNewdatabase
 if ($newdbcheck.column1 -match "Something"){
 write-host "Database $($newDBname) not restored ok. Restore failed? Not enough diskspace? Check errors and try again." -ForegroundColor RED;pause;exit
 }
 
+$sqlRenametoAXDB = @{
+'Database' = 'master'
+'serverinstance' = 'localhost'
+'querytimeout' = 90
+'query' = ""
+'trustservercertificate' = $trustservercert
+}
+
+$sqlRenametoAXDB.query = @"
+ALTER DATABASE [$newDBname] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+WAITFOR DELAY '00:00:10';
+ALTER DATABASE [$newDBname] MODIFY NAME = AXDB;
+WAITFOR DELAY '00:00:10';
+ALTER DATABASE [AXDB] SET MULTI_USER;
+"@
+
+$renamenewaxdb = Invoke-SqlCmd -Query $sqlRenametoAXDB 
+write-host "Renamed $($newDBname) to AXDB." -ForegroundColor green
+start-sleep -s 2
+
 #reconnect SQL users
-$sqlupdateDBQ = @"
+$sqlupdateDB = @{
+'Database' = 'AXDB'
+'serverinstance' = 'localhost'
+'querytimeout' = 120
+'query' = ""
+'trustservercertificate' = $trustservercert
+}
+$sqlupdateDB.query = @"
 DROP USER IF EXISTS [axretailruntimeuser]
 DROP USER IF EXISTS [axretaildatasyncuser]
 DROP USER IF EXISTS [axmrruntimeuser]
@@ -360,7 +409,7 @@ END
 
 IF EXISTS (SELECT * FROM sys.syslogins WHERE NAME = 'axdbadmin')
 BEGIN
-	ALTER AUTHORIZATION ON database::[$newDBname] TO sa
+	ALTER AUTHORIZATION ON database::[AXDB] TO sa
 
 	CREATE USER axdbadmin FROM LOGIN axdbadmin
 	EXEC sp_addrolemember 'db_owner', 'axdbadmin'
@@ -418,11 +467,9 @@ FROM docuvalue T1
 WHERE T1.storageproviderid = 1 --Azure storage
 
 
-IF((SELECT 1
-FROM SYS.CHANGE_TRACKING_DATABASES
-WHERE DATABASE_ID = DB_ID('$newDBname')) IS NULL)
+IF((SELECT 1 FROM SYS.CHANGE_TRACKING_DATABASES WHERE DATABASE_ID = DB_ID('AXDB')) IS NULL)
 BEGIN
-	ALTER DATABASE [$newDBname] SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 6 DAYS, AUTO_CLEANUP = ON)
+	ALTER DATABASE [AXDB] SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 6 DAYS, AUTO_CLEANUP = ON)
 END
 
 ;--GO
@@ -472,12 +519,20 @@ WHERE  NAME = 'TEMPTABLEINAXDB'
 
 #Remap SQL users
 write-host "Remapping SQL users..." -ForegroundColor yellow
-Invoke-SqlCmd -Query $sqlupdateDBQ -ServerInstance localhost -Database $newDBname -ErrorAction Continue -querytimeout 0 
+Invoke-SqlCmd -Query $sqlupdateDB
 write-host "Done remapping SQL users. (ignore any red error messages on console output)" -ForegroundColor green
 write-host ""
 
 #Cleanup Retail
-$sqlRetailcleanup = @"
+$sqlRetailcleanup = @{
+'Database' = 'AXDB'
+'serverinstance' = 'localhost'
+'querytimeout' = 0
+'query' = ""
+'trustservercertificate' = $trustservercert
+}
+
+$sqlRetailcleanup.query = @"
 /* Drop all non-system stored procs under schemas crt, ax, ext and cdx */
 DECLARE @schemaCrt INT
 DECLARE @schemaAx INT
@@ -774,7 +829,7 @@ GO
 "@
 
 write-host "Retail fix running. Takes about 7-8 minutes. Please wait..." -ForegroundColor yellow
-Invoke-SqlCmd -Query $sqlRetailcleanup -ServerInstance localhost -Database $newdbname -ErrorAction Continue -querytimeout 0 
+Invoke-SqlCmd -Query $sqlRetailcleanup 
 write-host "Done fixing Retail settings." -ForegroundColor green
 
 
@@ -786,17 +841,6 @@ $ssms = taskkill /im ssms.exe /f | out-null
 #write-host "Disabling Management reporter service..." -ForegroundColor Yellow
 #get-service | Where-Object {$_.Name -eq "MR2012ProcessService"} | Set-Service -StartupType Disabled
 
-$sqlrenameToAXDBq= @"
-ALTER DATABASE [$newDBname] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-WAITFOR DELAY '00:00:02';
-ALTER DATABASE [$newDBname] MODIFY NAME = AXDB;
-WAITFOR DELAY '00:00:02';
-ALTER DATABASE [AXDB] SET MULTI_USER;
-"@
-
-$renamenewaxdb = Invoke-SqlCmd -Query $sqlrenameToAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 
-write-host "Renamed $($newDBname) to AXDB." -ForegroundColor green
-start-sleep -s 2
 
 #set AXDB to simple recovery mode
 write-host "Set AxDB to simple recovery mode..." -foregroundcolor yellow
