@@ -325,7 +325,7 @@ WAITFOR DELAY '00:00:10';
 ALTER DATABASE [AXDB_org] SET MULTI_USER;
 END
 "@
-$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90 -ErrorAction Stop
+$renameorgaxdb = Invoke-SqlCmd -Query $sqlrenameorgAXDBq -Database master -ServerInstance localhost -ErrorAction continue -querytimeout 90
 #>
 
 #query check if AXDB exists and drop it
