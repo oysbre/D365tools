@@ -291,6 +291,8 @@ write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yel
 
 #stop D365 related services before restore
 stopservices
+Write-host "Restarting SQL service..." -ForegroundColor yellow
+Restart-Service -Force MSSQLSERVER
 
 #drop AXDB_org if exists
 $sqlDropAXDBorg = @{
