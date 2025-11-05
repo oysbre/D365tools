@@ -145,7 +145,7 @@ function Run-DBSync() {
 
 # BEGIN
 
-#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows Update
+#Enable TLS 1.2 Ciphersuites ECDHE_ECDSA for Windows 
 $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002';
 $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
 $cipherList = $ciphers.Split(',');
@@ -153,20 +153,20 @@ $cipherList = $ciphers.Split(',');
 Set-ItemProperty -Path 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
 #set strong cryptography on 32 bit .Net Framework (version 4 and above)
 Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\.NetFramework\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord
-$updateReg = $false;
+$Reg = $false;
 if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256') {
     Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256";
     #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256';
     $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256,')
-    $updateReg = $true;
+    $Reg = $true;
 }
 if ($cipherList -inotcontains 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384') {
     Write-Host "Adding TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
     #$ciphers += ',TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384';
     $ciphers = $ciphers.insert(0,'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,')
-    $updateReg = $true;
+    $Reg = $true;
 }
-if ($updateReg) {
+if ($Reg) {
     Set-ItemProperty "$regPath" -Name 'Functions' -Value "$ciphers";
     $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
     write-host "Values after: $ciphers";
@@ -175,7 +175,7 @@ if ($updateReg) {
     Write-host "======================================================================" -foregroundcolor Yellow;
     start-sleep -s 8
     Restart-Computer -force
-}#end update registry with cipherssuites
+}#end  registry with cipherssuites
 
 CLS
 write-host "#############################################################################################################" -ForegroundColor Yellow
@@ -192,7 +192,7 @@ write-host "Installing NuGet..." -ForegroundColor yellow
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 }
 
-#install/update d365fo.tools
+#install/ d365fo.tools
 if(-not (Get-Module d365fo.tools -ListAvailable)){
     Write-host "Installing D365fo.tools..." -foregroundcolor yellow
     Install-Module d365fo.tools -Force
@@ -205,14 +205,14 @@ else {
             $fover = (get-installedmodule d365fo.tools).version.tostring()
             if ([System.Version]$tagver -gt [System.Version]$fover){
              Write-host "Updating D365fo.tools..." -foregroundcolor yellow
-	     Update-Module -name d365fo.tools -Force
+	     -Module -name d365fo.tools -Force
             }#end if gt version check
         }#end if tagver 
     }
     else {write-host "Can't connect to github to fetch D365fo.tools" -ForegroundColor CYAN }
-}#end install/update d365fo.tools
+}#end install/ d365fo.tools
 
-#Install/update AzCopy
+#Install/ AzCopy
 $azcopyuri = "https://aka.ms/downloadazcopy-v10-windows"
 If (-not(test-path "C:\windows\AzCopy.exe")){
     write-host "Installing AzCopy to C:\Windows..." -ForegroundColor Yellow
@@ -225,8 +225,8 @@ If (-not(test-path "C:\windows\AzCopy.exe")){
     remove-item $env:temp\AzCopy -force -Recurse
 }
 else {
-$azcopyupdate = & azcopy -h | select-string -pattern "newer version"
-if ($azcopyupdate){
+$azcopy = & azcopy -h | select-string -pattern "newer version"
+if ($azcopy){
     write-host "Updating AzCopy..." -ForegroundColor Yellow
     remove-item $env:temp\AzCopy.zip -force -ea 0 
     Invoke-WebRequest -Uri $azcopyuri -OutFile $env:temp\AzCopy.zip -UseBasicParsing
@@ -285,7 +285,7 @@ Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs l
 Repair-D365BacpacModelFile -path $modelFilePath -Force
 
 write-host "Truncating tables in BACPAC before restore/import..." -ForegroundColor Yellow
-Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","EVENTINBOXDATA","EVENTINBOX","RETAILEODSTATEMENTCONTROLLERLOG","SMMTRANSLOG","EO_InventoryToDDDLog","EO_DimensionsUpdateLog" -ClearFromSource -ErrorAction SilentlyContinue
+Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","EVENTINBOXDATA","EVENTINBOX","RETAILEODSTATEMENTCONTROLLERLOG","SMMTRANSLOG","EO_InventoryToDDDLog","EO_DimensionsLog" -ClearFromSource -ErrorAction SilentlyContinue
 write-host
 write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
 
@@ -532,7 +532,7 @@ WHERE  NAME = 'TEMPTABLEINAXDB'
 
 #Remap SQL users
 write-host "Remapping SQL users..." -ForegroundColor yellow
-Invoke-SqlCmd -Query $sqlupdateDB
+Invoke-SqlCmd -Query $sqlupdateDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database AXDB -querytimeout 180
 write-host "Done remapping SQL users. (ignore any red error messages on console output)" -ForegroundColor green
 write-host ""
 
