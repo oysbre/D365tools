@@ -849,13 +849,12 @@ write-host "Done fixing Retail settings." -ForegroundColor green
 
 
 #Check if VS and/or SSMS and kill processes
-$vs = taskkill /im devenv.exe /f | out-null
-$ssms = taskkill /im ssms.exe /f | out-null
+$vs = taskkill /im devenv.exe /f *>$null
+$ssms = taskkill /im ssms.exe /f *>$null
 
 #Disable management reporter
 #write-host "Disabling Management reporter service..." -ForegroundColor Yellow
 #get-service | Where-Object {$_.Name -eq "MR2012ProcessService"} | Set-Service -StartupType Disabled
-
 
 #set AXDB to simple recovery mode
 write-host "Set AxDB to simple recovery mode..." -foregroundcolor yellow
