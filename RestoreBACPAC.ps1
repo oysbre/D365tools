@@ -354,8 +354,8 @@ write-host "Dropping AXDB if exists..." -ForegroundColor yellow
 $dbcheckaxdb = Invoke-SqlCmd -query $sqlDropAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90 -ErrorAction Stop
 
 #Restore BACPAC 
-write-host "Restoring BACPAC. Logging to $($localdirRestoreLog)_$($datestamp).log..." -foregroundcolor yellow
-& "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml" /DiagnosticsFile:$localdirRestoreLog_$datestamp.log /DiagnosticsLevel:Verbose
+write-host "Restoring BACPAC. Logging to $($localdir)RestoreLog_$($datestamp).log..." -foregroundcolor yellow
+& "$bacpacexepath\SqlPackage.exe" /a:import /sf:$sqlbakPath /tsn:localhost /tdn:$newDBname /p:CommandTimeout=0 /p:DisableIndexesForDataPhase=FALSE /ttsc:True /mfp:"$($localdir)BacpacModel-edited.xml" /DiagnosticsFile:"$($localdir)RestoreLog_$($datestamp).log" /DiagnosticsLevel:Verbose
 
 start-sleep -s 2
 
