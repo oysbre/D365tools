@@ -1,6 +1,6 @@
-#To download tuningscript to Desktop, run Powershell command below on the CHE. Run with Powershell after download.
-#iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1"
-
+<#To download tuningscript to Desktop, run Powershell command below on the CHE. Run with Powershell after download.
+iwr https://raw.githubusercontent.com/oysbre/D365tools/main/D365CHEtuning.ps1 -outfile "$env:USERPROFILE\Desktop\D365CHEtuning.ps1"
+#>
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
@@ -48,9 +48,9 @@ if ($updateReg) {
     $ciphers = Get-ItemPropertyValue "$regPath" -Name 'Functions';
    #write-host "Values after: $ciphers";
     write-host "###########################################################################"
-    Write-host "Rebooting computer in 5 sec to enable new ciphersuites. Re-run script after reboot!" -foregroundcolor Yellow;
+    Write-host "Rebooting computer in 6 sec to enable new ciphersuites. Re-run script after reboot!" -foregroundcolor Yellow;
     write-host "###########################################################################"
-    start-sleep -s 5
+    start-sleep -s 6
     Restart-Computer -force
 }
 
