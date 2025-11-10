@@ -463,6 +463,7 @@ Else {
         "notepadplusplus.install"
 	"7zip.install"
  	"agentransack"
+	"microsoftazurestorageexplorer"
     )
 
     # Install each program
