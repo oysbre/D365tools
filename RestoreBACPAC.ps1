@@ -285,7 +285,7 @@ Write-host "Fixing BACPAC Modelfile for incompatible functions in Azure SQL vs l
 Repair-D365BacpacModelFile -path $modelFilePath -Force
 
 write-host "Truncating tables in BACPAC before restore/import..." -ForegroundColor Yellow
-Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","AMDEVICETRANSACTIONLOG","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","EVENTINBOXDATA","EVENTINBOX","RETAILEODSTATEMENTCONTROLLERLOG","SMMTRANSLOG","EO_InventoryToDDDLog","EO_DimensionsLog" -ClearFromSource -ErrorAction SilentlyContinue
+Clear-D365BacpacTableData -Path $sqlbakPath -Table "SECURITYOBJECTHISTORY","*Staging*","BatchHistory","BatchJobHistory","SYSDATABASELOG*","ReqCalcTaskTrace","LACARCHIVE*","BISWSHISTORY","DTA_*","BISMESSAGEHISTORYHEADER","RETAILTRANSACTIONPAYMENTTRANS","SRSTMPDATASTORE","MCRORDEREVENTTABLE","EVENTCUDLINES","EVENTINBOXDATA","EVENTINBOX","RETAILEODSTATEMENTCONTROLLERLOG","SMMTRANSLOG","EO_InventoryToDDDLog","EO_DimensionsLog" -ClearFromSource -ErrorAction SilentlyContinue
 write-host
 write-host "Restore of BACPAC takes awhile. Please wait..." -ForegroundColor yellow
 
