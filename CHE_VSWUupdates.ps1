@@ -1,5 +1,6 @@
-# Update all Visual Studio instances and get all Windows updates including other MS products.
-# See https://www.powershellgallery.com/ for module and version info
+<# Update all Visual Studio instances and get all Windows updates including other MS products.
+iwr https://raw.githubusercontent.com/oysbre/D365tools/main/CHE_VSWUupdates.ps1 -outfile "$env:USERPROFILE\Desktop\CHE_VSWUupdates.ps1"
+#>
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
