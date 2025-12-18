@@ -4,7 +4,7 @@ iwr https://raw.githubusercontent.com/oysbre/D365tools/main/CHE_VSWUupdates.ps1 
 #Check if PS Console is running as "elevated" aka Administrator mode
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
-
+write-host "This will update all Visual Studio instances and install Windows updates along with other Microsoft products." -foregroundcolor Magenta
 Function InstallModule($PSModuleName) {
 
  Function InstallPackageProvider($PackageProvider) #As Boolean
