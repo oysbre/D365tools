@@ -7,17 +7,17 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 #Set target downloadpath. Default c:\temp
 $targetdir = "C:\temp"
-$D365VHDname = "D365VHD-10_0_39_part"
+$D365VHDname = "D365VHD-10_0_46_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
 #Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
 #Place SAS URLs in right order in variable $URLS starting from part file nr 1. This is important since first file is an EXE (WinRAR Executable)
 #Save the script and run it!
 $URLS = @(
-<#1#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/5e514086-fe66-4f43-9bb4-b098fc096c0d/AX7ProductName-12-e73dbcb9-0b37-4fc0-9dd2-3696b518e66a?sv=2018-03-28&sr=b&sig=Yv97NE2HkAQ5hifrd2dkpISPaScJyUubf3t%2Bz7ab2WE%3D&se=2023-03-30T07%3A56%3A05Z&sp=r" 
-,<#2#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/715c007a-35aa-4600-93c7-32ada37ffc84/AX7ProductName-12-a1ebc659-a7c2-47df-a322-c21f63e70eea?sv=2018-03-28&sr=b&sig=aA2yS1ENjZzVU89GS1XN8BZxUXqtuUWR6rQE%2BwAkB%2Fs%3D&se=2023-03-30T07%3A56%3A25Z&sp=r"
-,<#3#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/0323fde0-b4bd-4514-b127-c1cc3975422b/AX7ProductName-12-8c734fb9-c066-45de-aae9-155bfabb26e4?sv=2018-03-28&sr=b&sig=DekjttYFTS6DuuuxjzLo0IMLuKr07j7u%2F8v%2Bpn9UBig%3D&se=2023-03-30T07%3A56%3A36Z&sp=r"
-,<#4#>"https://uswedpl1catalog.blob.core.windows.net/product-ax7productname/51673bcf-9e85-4e65-bf36-5ce80a561e94/AX7ProductName-12-2acb6aa3-216e-43fa-8405-b58323188a45?sv=2018-03-28&sr=b&sig=%2BmMOMx5gqQvtMhJ4fPutDZwx9LEFgaUCC7CWpz3OTqU%3D&se=2023-03-30T07%3A56%3A49Z&sp=r"
+<#1#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/dghLIzpJNKa1QlbbuJnbAa?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A00Z&ske=2026-01-15T12%3A54%3A00Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A00Z&se=2026-01-15T12%3A54%3A00Z&sr=b&sp=r&sig=xkmmFbMIxp4hlxOxcBOau7iIjQXoPhKbJ17RYnc1%2Bow%3D" 
+,<#2#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/K8K0tIQui2YPLfS4qrjoHc?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A11Z&ske=2026-01-15T12%3A54%3A11Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A11Z&se=2026-01-15T12%3A54%3A11Z&sr=b&sp=r&sig=f4osF5T62HJgnJRBH%2FuGaKsXARe2rjd6ynk5BCBPlZY%3D"
+,<#3#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/ff8SgUd2nOWzvIMEQ7uQIT?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A22Z&ske=2026-01-15T12%3A54%3A22Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A22Z&se=2026-01-15T12%3A54%3A22Z&sr=b&sp=r&sig=H2hNNQtRB%2Bqgv68e7nng02uyRrEWby5GMpnRswl9%2Bis%3D"
+,<#4#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/4EEMbJE7RT99znaS2B5Hze?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A31Z&ske=2026-01-15T12%3A54%3A31Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A31Z&se=2026-01-15T12%3A54%3A31Z&sr=b&sp=r&sig=c0GmGc01Fl1grYkTs%2FPWLOTdDCusqzkgGVg3e2htyTs%3D"
 
 
 )
@@ -85,3 +85,4 @@ if (test-path "$targetdir\$($D365VHDname)1.exe"){
     start-process "$targetdir\$($D365VHDname)1.exe"
 }
 else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow;start-sleep -s 4}
+
