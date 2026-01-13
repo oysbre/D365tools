@@ -1,4 +1,8 @@
-#Powershellscript to download VHD from LCS Shared library using AzCopy. Set/change targetdir variable if needed.
+<#
+Powershellscript to download VHD from LCS Shared library using AzCopy. Set/change targetdir variable if needed.
+Copy and paste the command below in Powershell do download the file to Desktop
+iwr https://raw.githubusercontent.com/oysbre/D365tools/main/azopyGetVHDfromLCS.ps1 -outfile "$env:USERPROFILE\Desktop\azopyGetVHDfromLCS.ps1"
+#>
 #Run as Admin powershellsession.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 
@@ -85,6 +89,7 @@ if (test-path "$targetdir\$($D365VHDname)1.exe"){
     start-process "$targetdir\$($D365VHDname)1.exe"
 }
 else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow;start-sleep -s 4}
+
 
 
 
