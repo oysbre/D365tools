@@ -10,16 +10,15 @@ $targetdir = "C:\temp"
 $D365VHDname = "D365VHD-10_0_46_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
-#Generate URL for each VHD file with SAS token from https://lcs.dynamics.com
-#Place SAS URLs in right order in variable $URLS starting from part file nr 1. This is important since first file is an EXE (WinRAR Executable)
+#Generate URL for each VHD file with SAS token from your LCS region; https://lcs.dynamics.com or https://eu.lcs.dynamics.com/
+#Place SAS URLs in right order between "" in variable $URLS starting from part file nr 1. This is important since first file is an EXE (WinRAR Executable)!
 #Save the script and run it!
+
 $URLS = @(
 <#1#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/dghLIzpJNKa1QlbbuJnbAa?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A00Z&ske=2026-01-15T12%3A54%3A00Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A00Z&se=2026-01-15T12%3A54%3A00Z&sr=b&sp=r&sig=xkmmFbMIxp4hlxOxcBOau7iIjQXoPhKbJ17RYnc1%2Bow%3D" 
 ,<#2#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/K8K0tIQui2YPLfS4qrjoHc?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A11Z&ske=2026-01-15T12%3A54%3A11Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A11Z&se=2026-01-15T12%3A54%3A11Z&sr=b&sp=r&sig=f4osF5T62HJgnJRBH%2FuGaKsXARe2rjd6ynk5BCBPlZY%3D"
 ,<#3#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/ff8SgUd2nOWzvIMEQ7uQIT?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A22Z&ske=2026-01-15T12%3A54%3A22Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A22Z&se=2026-01-15T12%3A54%3A22Z&sr=b&sp=r&sig=H2hNNQtRB%2Bqgv68e7nng02uyRrEWby5GMpnRswl9%2Bis%3D"
 ,<#4#>"https://d365opsasteuiwypep2gu3b.blob.core.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47-e54b86e7/4EEMbJE7RT99znaS2B5Hze?skoid=9ef30196-cd78-4a47-955e-89a3947f0a23&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-01-12T11%3A54%3A31Z&ske=2026-01-15T12%3A54%3A31Z&sks=b&skv=2025-05-05&sv=2025-05-05&st=2026-01-12T11%3A54%3A31Z&se=2026-01-15T12%3A54%3A31Z&sr=b&sp=r&sig=c0GmGc01Fl1grYkTs%2FPWLOTdDCusqzkgGVg3e2htyTs%3D"
-
-
 )
 #--------------------------------------
 
@@ -86,5 +85,6 @@ if (test-path "$targetdir\$($D365VHDname)1.exe"){
     start-process "$targetdir\$($D365VHDname)1.exe"
 }
 else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow;start-sleep -s 4}
+
 
 
