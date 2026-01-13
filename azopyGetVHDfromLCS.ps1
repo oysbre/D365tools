@@ -82,7 +82,9 @@ $i++ #iterate next number
 
 #Extract the VHD image.
 if (test-path "$targetdir\$($D365VHDname)1.exe"){
+    write-host "Extracting files..." -foregroundcolor yellow
     start-process "$targetdir\$($D365VHDname)1.exe"
 }
 else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow;start-sleep -s 4}
+
 
