@@ -14,7 +14,7 @@ $targetdir = "C:\temp"
 $D365VHDname = "D365VHD-10_0_46_part"
 
 #Note! The URLs with SAS token below are "expired" and will not work.
-#Generate SAS URL for each VHD file from your LCS region; https://lcs.dynamics.com or https://eu.lcs.dynamics.com/
+#Generate SAS URL for each VHD file by clicking to the left of the filename and click "Generate SAS link" from your LCS region; https://lcs.dynamics.com or https://eu.lcs.dynamics.com/
 #Replace SAS URLs in variable $URLS below between the "" and do it in right order starting from part file nr 1. This is important since first file is an EXE (WinRAR Executable)!
 #Save the script and run it!
 
@@ -89,6 +89,7 @@ if (test-path "$targetdir\$($D365VHDname)1.exe"){
     start-process "$targetdir\$($D365VHDname)1.exe"
 }
 else {write-host "No EXE file found to run in $($targetdir). Check SAS URLs." -ForegroundColor yellow;start-sleep -s 4}
+
 
 
 
