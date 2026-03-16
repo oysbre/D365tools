@@ -12,7 +12,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 #Set target downloadpath. Default c:\temp
 $targetdir = "C:\temp"
 $D365VHDname = "D365VHD-10_0_46_part"
-if (-not(test-path $targetdir)){new-item $targetdir -directory -force}
+if (-not(test-path $targetdir)){new-item $targetdir -itemtype directory -force}
 
 #Note! The URLs with SAS token below are "expired" and will not work.
 #Generate SAS URL for each VHD file by clicking to the left of the filename and click "Generate SAS link" from your LCS region; https://lcs.dynamics.com or https://eu.lcs.dynamics.com/
