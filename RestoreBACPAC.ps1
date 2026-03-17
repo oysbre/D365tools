@@ -351,7 +351,7 @@ WAITFOR DELAY '00:00:01';
 END
 "@
 write-host "Dropping AXDB if exists..." -ForegroundColor yellow
-$dbcheckaxdb = Invoke-SqlCmd -query $sqlDropAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90 -ErrorAction Stop
+$dbcheckaxdb = Invoke-SqlCmd -query $sqlDropAXDB.query -serverinstance localhost -encrypt optional -trustservercertificate -database master -querytimeout 90 -ErrorAction Continue
 
 #Restore BACPAC 
 write-host "Restoring BACPAC. Logging to $($localdir)RestoreLog_$($datestamp).log..." -foregroundcolor yellow
