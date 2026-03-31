@@ -15,14 +15,15 @@ if (test-path $webconf) {
     [xml]$xmlfile = Get-Content $webconf
     $fileattrib = get-childitem $webconf 
         if (-not($xmlfile.configuration.configSections.section | Where-Object { $_.name -eq 'SqlAuthenticationProviders' })){
+            #Backup web.config file and save the changes
+            copy-item $fileattrib.fullname "$($fileattrib.DirectoryName)\$($fileattrib.basename)-$(get-date -f yyyyMMdd)$($fileattrib.extension)"
             
             #Add $newNode 
             $newnode = $xmlfile.CreateElement("section")
             $newnode.SetAttribute("name","SqlAuthenticationProviders")
             $newnode.SetAttribute("type","System.Data.SqlClient.SqlAuthenticationProviderConfigurationSection, System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")
             $xmlfile.configuration.configSections.AppendChild($newnode)| out-null
-            #Backup web.config file and save the changes
-            copy-item $fileattrib.fullname "$($fileattrib.DirectoryName)\$($fileattrib.basename)-$(get-date -f yyyyMMdd)$($fileattrib.extension)"
+            
             $xmlfile.Save($webconf)
             Write-Host "Added missing node 'SqlAuthenticationProviders' in $($webconf)." -foregroundcolor Green
     }#end xmlfile node check
