@@ -9,7 +9,7 @@ Function InstallModule($PSModuleName) {
 
  Function InstallPackageProvider($PackageProvider) #As Boolean
  {
-  Write-Host "Istalling/Updating the '$PackageProvider' package provider."
+  Write-Host "Installing/Updating the '$PackageProvider' package provider."
   $Result = Get-PackageProvider -Name "$PackageProvider" -ForceBootStrap 2>$Null
   If ($Result -EQ $Null)
   {
