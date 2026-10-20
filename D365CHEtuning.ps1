@@ -191,6 +191,11 @@ Invoke-D365InstallAzCopy
 Invoke-D365InstallSqlPackage
 #endregion
 
+#show file extensions
+$regPathFilext = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+if (-not (Test-Path $regPathFilext)) {New-Item -Path $regPathFilext -Force | Out-Null}
+Set-ItemProperty -Path $regPathFilext -Name "HideFileExt" -Value 0 -Type DWORD
+
 #set timezone based on IP address (estimated)
 Write-host "Set timezone based on IP location (estimated)..." -foregroundcolor Yellow
 [string]$IPAddress = (Invoke-WebRequest -Uri 'https://ifconfig.me/ip' -ContentType 'text/plain' -UseBasicParsing -ea 0).Content.Trim()
