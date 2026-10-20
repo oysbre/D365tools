@@ -100,18 +100,7 @@ if(get-module sqlserver){"yes"}else{"no"}
 Import-Module-SQLServer
 if(get-module sqlserver){"yes"}else{"no"}
 Import-Module-SQLServer
-
-#get SQL version and set parameter trustservercert
-$inst = (get-itemproperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
-foreach ($i in $inst)
-{
-   $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i
-   $sqlver += (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").Version
-}
-$sqlver = $sqlver | sort desc
-if ($sqlver -ge 16){
-$trustservercert = 1
-}
+$PSDefaultParameterValues['Invoke-Sqlcmd:TrustServerCertificate'] = $true
 
 function Set-RegistryValueForAllUsers { 
         [CmdletBinding()] 
@@ -399,7 +388,6 @@ $sqlQmaxmem = @{
 'serverinstance' = 'localhost'
 'querytimeout' = 60
 'query' = ''
-'trustservercertificate' = $trustservercert
 }
 $sqlQmaxmem.query = @"
 sp_configure 'show advanced options', 1;
