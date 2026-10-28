@@ -3,7 +3,11 @@ fix "The requested Performance Counter is not a custom counter, it has to be ini
 To download, copy the line below and paste it in Powershell console. Run the script from Desktop.
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/PerformanceCounterFix.ps1 -outfile "$env:USERPROFILE\Desktop\PerformanceCounterFix.ps1"
 #>
-
+If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{   
+#"No Administrative rights, it will display a popup window asking user for Admin rights"
+$arguments = "& '" + $myinvocation.mycommand.definition + "'";Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments;break
+}
 $AOSDirectory = "$env:servicedrive\AOSService\PackagesLocalDirectory"
 $AOSBinDirectory = $AOSDirectory + '\bin'
 
