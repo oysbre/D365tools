@@ -1,6 +1,6 @@
 <#
 fix "The requested Performance Counter is not a custom counter, it has to be initialized as ReadOnly" error msg in FO
-To download, copy the line below and paste it in Powershell console. Run the script from Desktop.
+To download Powershellscrip to Desktop, copy the line below and paste it in Powershell console. Run the script from Desktop.
 iwr https://raw.githubusercontent.com/oysbre/D365tools/main/PerformanceCounterFix.ps1 -outfile "$env:USERPROFILE\Desktop\PerformanceCounterFix.ps1"
 #>
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
