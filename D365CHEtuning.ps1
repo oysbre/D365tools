@@ -458,6 +458,7 @@ Else {
 	"7zip.install"
  	"agentransack"
 	"microsoftazurestorageexplorer"
+	"powertoys"
     )
 
     # Install each program
